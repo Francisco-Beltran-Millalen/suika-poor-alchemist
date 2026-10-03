@@ -58,7 +58,26 @@ godot --path . --scene res://game/main.tscn --write-movie /tmp/mov/shot.png --fi
   `next_piece_changed(null)`. **Todo observador de esas señales debe aceptar
   `null`** (no dibujar, no limitar) y tiene un test que lo comprueba.
 - **Ayudas de test:** van en `tests/helpers/`, **sin `class_name`**, y se
-  cargan con `preload(...)`.
+  cargan con `preload(...)`. **Ningún helper puede empezar por `test_`**,
+  porque GUT lo intentaría cargar como test. Cada helper se crea en la
+  primera fase en la que existen las clases que usa.
+- **Arrays tipados:** los `Array[T]` se construyen como
+  `var xs: Array[T] = []` + `append`. Nunca asignes un literal sin tipo ni
+  devuelvas un `Array` genérico desde una función `-> Array[T]`: falla en
+  tiempo de ejecución. La cola de fusiones es `Array[Array]`, o mejor dos
+  `Array[Piece]` paralelos.
+- **Esperas en tests:** `wait_until` de GUT **no falla** al agotar el tiempo,
+  solo devuelve `false`. Úsalo siempre como
+  `assert_true(await wait_until(func() -> bool: return …, 3.0), "mensaje")`.
+  Para medir duraciones de simulación, cuenta frames de física
+  (`await wait_physics_frames(n)`) en lugar de segundos de reloj.
+- **Reinicio y emisiones incondicionales:** los métodos `reset()`
+  (`GameState`, `DangerSystem`, `DropSystem`) emiten sus señales **siempre**,
+  como excepción explícita a la regla de "solo si cambia". Así los
+  observadores se sincronizan tras un reinicio.
+- **El código de una fase solo referencia clases que ya existen.** Los
+  nodos de `main.tscn`, sus getters y sus `setup()` se añaden en la fase
+  que crea su clase.
 - **Config de los tests de integración:** `var cfg := load("res://game/game_config.tres").duplicate()`
   y se le reemplaza `spawn_strategy` (p. ej. por `FixedSpawnStrategy`) y
   `rng_seed`. Así el catálogo real (con `philosopher_stone`) está disponible.
@@ -91,16 +110,19 @@ infraestructura de tests.
      desde el editor o con un script y copia el resultado.
 2. En `README.md`, la fila "Motor" pone "Forward+ / GL Compatibility"; debe
    decir solo "GL Compatibility".
-3. Crea `tests/helpers/` con:
-   - `test_data.gd`: funciones estáticas que construyen datos en memoria,
-     sin `.tres`. Se completan en la fase 1, cuando existan las clases:
+3. Crea la carpeta `tests/helpers/` (vacía, con `.gitkeep`). Los helpers se
+   crean más adelante, en la fase indicada:
+   - `data_factory.gd` (fase 1; `make_piece` en la fase 3): funciones
+     estáticas que construyen datos en memoria, sin `.tres`:
      - `make_catalog(levels: int = 8) -> PieceCatalog`: cadena válida con
        `radius = 10 + 6·level` y `score_value = level·(level+1)/2`;
      - `make_config(catalog: PieceCatalog = null) -> GameConfig`: los valores
        de `03` §6 con `rng_seed = 1234`;
      - `make_piece(data: PieceData, state: Piece.State) -> Piece` (fase 3).
-   - `fixed_spawn_strategy.gd` (fase 1): una `SpawnStrategy` que siempre
-     devuelve el nivel `level` (exportado).
+   - `fixed_spawn_strategy.gd` (fase 1): extiende `SpawnStrategy`, con
+     `@export var level: int = 1`. Implementa **los tres** métodos
+     abstractos: `pick` → `catalog.get_by_level(level)`; `validate` →
+     vacío; `get_max_spawn_level` → `level`.
    - `stub_danger_zone.gd` (fase 3): extiende `DangerZone`, con
      `var pieces: Array[Piece]` y un `get_pieces_inside()` sobrescrito que la
      devuelve.
@@ -164,6 +186,7 @@ class_name GameConfigValidator
 extends RefCounted
 static func validate(config: GameConfig) -> PackedStringArray
 # = catálogo + config.spawn_strategy.validate(catálogo) + restricciones de 03 §6
+# Si piece_catalog o spawn_strategy son null, lo reporta como error y no sigue.
 
 # piece/spawn/spawn_strategy.gd
 @abstract class_name SpawnStrategy
@@ -207,11 +230,16 @@ class_name WeightedSpawnStrategy extends SpawnStrategy
    `piece_catalog.tres`. Recomendación: escríbelos desde el último
    (`next_piece = null`) hacia el primero, para que cada `ext_resource` ya
    exista. Alternativa: un script desechable `godot --headless -s` que los
-   construya con `ResourceSaver.save()`; ese script no se commitea.
+   construya con `ResourceSaver.save()`. Ese script no se commitea, y debe
+   **guardar cada recurso en su `.tres` y recargarlo con `load()` antes de
+   asignarlo como `next_piece` o meterlo en el catálogo**; si no, se
+   incrustan copias como `sub_resource` y se rompe la identidad.
+   **Ningún `.tres` de datos puede contener `[sub_resource type="Resource"`**:
+   todas las referencias entre materiales son `ext_resource`.
 4. Crea `game/game_config.tres` con los valores de `03` §6, apuntando a
    `spawn_suika_classic.tres` y a `piece_catalog.tres`.
-5. Completa `tests/helpers/test_data.gd` (`make_catalog`, `make_config`) y
-   `fixed_spawn_strategy.gd`.
+5. Crea `tests/helpers/data_factory.gd` (`make_catalog`, `make_config`) y
+   `tests/helpers/fixed_spawn_strategy.gd`.
 
 ### Tests (`tests/unit/`)
 
@@ -230,13 +258,17 @@ class_name WeightedSpawnStrategy extends SpawnStrategy
   - `get_max_spawn_level` es correcto en ambas clases.
 - `test_game_config_validator.gd`:
   - `make_config()` es válida;
+  - `piece_catalog = null` o `spawn_strategy = null` → error, sin crash;
   - detecta `spawn_y ≥ danger_line_y`, `spawn_y + r_max_generable ≥ danger_line_y`,
     `2·r_max > container_width` y una estrategia inválida.
 - `test_real_data.gd` (carga los `.tres` reales):
   - `game_config.tres` pasa el validador;
   - el catálogo tiene 8 piezas con ids, radios, puntuaciones y rarezas
     idénticos a `03` §4;
-  - los tres presets son válidos.
+  - los tres presets son válidos;
+  - **identidad de recursos:** `catalog.pieces[i].next_piece == catalog.pieces[i + 1]`
+    (misma instancia) y `load("res://piece/data/copper.tres") == catalog.get_by_level(3)`.
+    Sin esto, la fusión `a.data == b.data` fallaría en silencio.
 
 **Commit:** `feat(datos): PieceData, catálogo, estrategias de generación y GameConfig con validación`
 
@@ -263,6 +295,7 @@ func get_status() -> Status
 func get_current_piece() -> PieceData
 func get_next_piece() -> PieceData
 func is_playing() -> bool
+func is_finished() -> bool                   # GAME_OVER o VICTORY (Main lo usa para congelar y reiniciar)
 func start() -> bool                         # READY → PLAYING; false si no está en READY
 func add_score(amount: int) -> void          # ignora si no está PLAYING; assert(amount >= 0)
 func set_queue(current: PieceData, next: PieceData) -> void
@@ -280,7 +313,8 @@ func reset() -> void            # si rng_seed != 0, vuelve a sembrar con la mism
 func set_strategy(strategy: SpawnStrategy) -> void
 ```
 
-- `score_changed` y `status_changed` se emiten **solo si el valor cambia**.
+- `score_changed` y `status_changed` se emiten **solo si el valor cambia**
+  (salvo en `reset()`).
 - `current_piece_changed` y `next_piece_changed` se emiten **siempre** en
   `set_queue` y `advance_queue`, aunque el recurso sea el mismo. El
   generador repite tipos a menudo, y los observadores deben enterarse de
@@ -358,7 +392,10 @@ func get_pieces() -> Array[Piece]
 class_name DangerZone
 extends Area2D
 func setup(config: GameConfig) -> void   # rectángulo de y = −E a y = danger_line_y, ancho W
-func get_pieces_inside() -> Array[Piece] # get_overlapping_bodies() filtrados a Piece
+func get_pieces_inside() -> Array[Piece]
+# get_overlapping_bodies() filtrados a: es Piece, is_instance_valid y is_inside_tree().
+# Los solapes van un paso de física por detrás: una pieza quitada con remove_child
+# sigue apareciendo en el mismo frame, y una recién añadida tarda ~2 frames.
 ```
 
 **Escenas:**
@@ -402,6 +439,12 @@ func get_pieces_inside() -> Array[Piece] # get_overlapping_bodies() filtrados a 
 5. **Número de nivel** centrado (`ThemeDB.fallback_font`), para que se lea
    mientras no haya arte.
 
+**Rotación:** el `Visual` es hijo de un `RigidBody2D` que rueda. Sin
+textura, `PieceVisual._process` fija `global_rotation = 0`, de modo que el
+número y el reflejo quedan siempre derechos (el círculo no cambia al rotar).
+Con textura, el visual rota con el cuerpo. Las instancias usadas fuera de
+una pieza (vista previa, iconos) no necesitan esto.
+
 **Detalle crítico:** no modifiques nunca la shape del sub-recurso de la
 escena, porque se comparte entre todas las instancias. Cada `Piece` crea la
 suya.
@@ -409,7 +452,7 @@ suya.
 ### Pasos
 
 1. Escribe los scripts y las escenas del contrato.
-2. Añade `make_piece` a `test_data.gd` y crea `stub_danger_zone.gd`.
+2. Añade `make_piece` a `data_factory.gd` y crea `stub_danger_zone.gd`.
 
 ### Tests
 
@@ -427,13 +470,15 @@ suya.
 - `test_piece_physics.gd` (integración, con `Board` real y
   `wait_physics_frames` / `wait_until`):
   - una pieza `DROPPING` soltada sobre el tablero vacío pasa a `ACTIVE` y
-    reposa en `y ≈ H − r` (±2 px) en menos de 3 s;
+    reposa en `y ≈ H − r` (±2 px) antes de 180 frames de física;
   - dos piezas que caen una sobre otra emiten `contact_detected`;
   - `DangerZone.get_pieces_inside()` incluye una pieza congelada
-    (`freeze = true`, `freeze_mode = FREEZE_MODE_STATIC` explícito) en
-    `y = 50` y excluye otra en `y = 400`. Espera **al menos 2 frames de
+    (`freeze = true`, `freeze_mode = FREEZE_MODE_KINEMATIC`) en `y = 50` y
+    excluye otra en `y = 400`. Espera **al menos 2 frames de
     física** tras `add_child` antes de consultar, porque los solapes se
     actualizan después del paso;
+  - una pieza quitada con `board.clear_pieces()` no aparece en
+    `get_pieces_inside()` en el mismo frame;
   - con el tablero congelado, una pieza no se mueve en 30 frames.
 
 **Commit:** `feat(tablero): Piece, PieceVisual, Board y DangerZone construidos desde GameConfig`
@@ -463,7 +508,9 @@ signal drop_ready_changed(is_ready: bool)
 signal piece_dropped(piece: Piece)
 func setup(state: GameState, generator: PieceGenerator, spawner: PieceSpawner,
 		board: Board, config: GameConfig) -> void
-func reset() -> void                         # set_queue(next(), next()), cooldown 0, aim = W/2
+func reset() -> void
+# orden: aim = W/2 y cooldown = 0 PRIMERO; luego set_queue(next(), next());
+# al final emite siempre aim_changed(get_aim_x()) y drop_ready_changed(true)
 func request_aim_global(global_x: float) -> void   # convierte con board.to_local()
 func request_aim_step(direction: float, delta: float) -> void   # aim += dir · aim_speed · delta
 func request_drop() -> bool                  # 04 §5; false si se ignoró
@@ -491,13 +538,16 @@ func setup(state: GameState, drop_system: DropSystem, config: GameConfig) -> voi
 class_name Main extends Node
 @export var config: GameConfig = preload("res://game/game_config.tres")
 const BOARD_TOP_MARGIN: float = 80.0
-# Getters para los tests de integración (solo lectura; ningún componente del juego los usa):
+# Getters para los tests de integración (solo lectura; ningún componente del juego los usa).
+# En esta fase:
 func get_state() -> GameState
 func get_board() -> Board
 func get_spawner() -> PieceSpawner
 func get_drop_system() -> DropSystem
-func get_merge_system() -> MergeSystem
-func get_danger_system() -> DangerSystem
+func get_drop_controller() -> DropController
+# Fase 5: get_merge_system() -> MergeSystem
+# Fase 6: get_danger_system() -> DangerSystem
+# Fase 7: get_ui() -> GameUI
 # _ready: errores = GameConfigValidator.validate(config); si hay → push_error de cada uno y return
 #         _compose(); _start_new_game()
 ```
@@ -521,8 +571,10 @@ cambia el radio. Si el dato es `null`, no hace nada.
 ### Pasos
 
 1. Escribe el spawner, el `DropSystem`, el controlador y la vista previa.
-2. Crea `game/main.tscn` con el árbol de `02` §5, de momento sin `GameUI`
-   ni `EffectsLayer`. Crea `tests/helpers/board_rig.gd`.
+2. Crea `game/main.tscn` con el árbol de `02` §5, pero **solo con los nodos
+   cuyas clases ya existen**: `World/Board`, `World/DropPreview`,
+   `Systems/PieceSpawner`, `Systems/DropSystem` y `DropController`. Los demás
+   se añaden en sus fases. Crea `tests/helpers/board_rig.gd`.
 3. En `main.gd`:
    - `_compose()`:
      - crea `GameState` y `PieceGenerator`;
@@ -555,7 +607,9 @@ cambia el radio. Si el dato es `null`, no hace nada.
     original;
   - `state.reset()` (ACTUAL nulo) no provoca errores y `get_aim_x()`
     devuelve W/2;
-  - `request_aim_step(1, 0.1)` desplaza 60 px.
+  - `request_aim_step(1, 0.1)` desplaza 60 px;
+  - tras apuntar a otra X y entrar en cooldown, `reset()` emite
+    `aim_changed(W/2)` y `drop_ready_changed(true)`.
 
 **Verificación manual:** ejecuta el juego, apunta con el ratón y con A/D, y
 suelta. Las piezas se apilan, no hay fusiones y nunca atraviesan las paredes
@@ -598,7 +652,8 @@ crees ni elimines cuerpos aquí):
 1. Ignora si no está `PLAYING`, si `a == b`, si `a.data != b.data` o si
    alguna está `CONSUMED`.
 2. `a.consume(); b.consume()`.
-3. `_pending.append([a, b])`.
+3. Encola el par (`_pending_a.append(a); _pending_b.append(b)`, ambos
+   `Array[Piece]`).
 
 **`tick()`** (desde `_physics_process`), para cada par en orden:
 
@@ -615,7 +670,9 @@ crees ni elimines cuerpos aquí):
 ### Pasos
 
 1. Escribe `MergeSystem` y `ProgressSystem`.
-2. En `main.gd`:
+2. Añade `Systems/MergeSystem` y `Systems/ProgressSystem` a `main.tscn`.
+3. En `main.gd`:
+   - añade `get_merge_system()`;
    - llama a `merge.setup` y a `progress.setup`;
    - conecta `spawner.piece_spawned` → `merge.register_piece`;
    - añade `merge.reset()` al principio de `_start_new_game()`.
@@ -646,8 +703,8 @@ crees ni elimines cuerpos aquí):
 - `test_merge_integration.gd` (`main.tscn` con la config de integración y
   `FixedSpawnStrategy(1)`; las piezas extra se crean con
   `main.get_spawner()`):
-  - dos soltadas en la misma X, esperando el cooldown → en menos de 3 s
-    queda exactamente 1 pieza de nivel 2 y el score es 3;
+  - dos soltadas en la misma X, esperando el cooldown → antes de 180
+    frames de física queda exactamente 1 pieza de nivel 2 y el score es 3;
   - cascada: una pieza de nivel 2 en el suelo y dos de nivel 1 encima →
     termina con 1 pieza de nivel 3 y score `3 + 6 = 9`.
 
@@ -668,7 +725,7 @@ piezas en caída.
 ```gdscript
 # systems/danger_system.gd
 class_name DangerSystem extends Node
-signal danger_changed(ratio: float)          # 0..1, emitida solo si cambia
+signal danger_changed(ratio: float)          # 0..1, solo si cambia (reset() emite siempre)
 func setup(state: GameState, danger_zone: DangerZone, config: GameConfig) -> void
 func tick(delta: float) -> void
 func reset() -> void                         # borra los timers y emite danger_changed(0)
@@ -688,11 +745,14 @@ func reset() -> void                         # borra los timers y emite danger_c
 ### Pasos
 
 1. Escribe `DangerSystem`.
-2. En `main.gd`:
+2. Añade `Systems/DangerSystem` a `main.tscn`.
+3. En `main.gd`:
+   - añade `get_danger_system()`;
    - llama a `danger.setup(state, board.danger_zone, config)`;
    - añade `danger.reset()` a `_start_new_game()`;
    - conecta `state.status_changed` → `_on_state_status_changed`, que llama a
-     `board.set_frozen(status in [GAME_OVER, VICTORY])`.
+     `board.set_frozen(_state.is_finished())`. La regla vive en `GameState`;
+     `Main` no evalúa estados.
 
 ### Tests
 
@@ -704,11 +764,12 @@ func reset() -> void                         # borra los timers y emite danger_c
   - fuera de `PLAYING`, `tick` no hace nada;
   - `reset()` borra los contadores.
 - `test_danger_integration.gd` (`main.tscn`):
-  - una pieza `ACTIVE` congelada sobre la línea → `GAME_OVER` en
-    1.0–1.3 s, y después el tablero queda congelado y `request_drop`
-    devuelve `false`;
-  - soltar 1 pieza en el tablero vacío y esperar 2 s → sigue `PLAYING`
-    (exención de `DROPPING`).
+  - una pieza `ACTIVE` congelada (`FREEZE_MODE_KINEMATIC`) sobre la línea:
+    sigue `PLAYING` a los 50 frames de física y está en `GAME_OVER` a los 75
+    (60 de retardo + latencia del Area). Después, el tablero queda congelado
+    y `request_drop` devuelve `false`;
+  - soltar 1 pieza en el tablero vacío y esperar 120 frames → sigue
+    `PLAYING` (exención de `DROPPING`).
 
 **Commit:** `feat(danger): condición de derrota con retardo y exención de piezas en caída`
 
@@ -723,7 +784,9 @@ func reset() -> void                         # borra los timers y emite danger_c
 ```gdscript
 # ui/piece_icon.gd
 class_name PieceIcon extends Control
-func set_piece(data: PieceData) -> void       # dibuja con PieceVisual.draw_piece, escalado al rect
+func set_piece(data: PieceData) -> void       # null → vacío; dibuja con PieceVisual.draw_piece, escalado al rect
+# custom_minimum_size obligatorio: 64×64 en NextPiece y 24×24 en la leyenda
+# (en un contenedor, un Control sin tamaño mínimo mide 0×0 y no se ve)
 
 # ui/effects_layer.gd
 class_name EffectsLayer extends Node2D
@@ -767,10 +830,10 @@ GameUI (CanvasLayer)
 1. Escribe `PieceIcon`, `EffectsLayer` y `GameUI`.
 2. Añade `EffectsLayer` (bajo `World`) y `GameUI` a `main.tscn`.
 3. En `main.gd`:
+   - añade `get_ui()`;
    - llama a `effects.setup` y a `ui.setup`;
    - conecta `ui.restart_requested` y `controller.restart_requested` →
-     `_on_restart_requested`, que solo reinicia si el estado es `GAME_OVER` o
-     `VICTORY`;
+     `_on_restart_requested`, que solo reinicia si `_state.is_finished()`;
    - deja `_start_new_game()` completo, exactamente como en `02` §8.5.
 
 ### Tests
@@ -796,11 +859,12 @@ GameUI (CanvasLayer)
     1. en `PLAYING`, crear dos piezas iguales y llamar a
        `get_merge_system().handle_contact(a, b)` (pendiente = 1);
     2. `get_state().set_game_over()`;
-    3. emitir `restart_requested`.
+    3. `main.get_ui().restart_requested.emit()`.
 
     Resultado esperado: pendiente = 0 y ninguna pieza aparece en los 10
     frames siguientes;
-  - `restart_requested` durante `PLAYING` → se ignora.
+  - `main.get_drop_controller().restart_requested.emit()` durante
+    `PLAYING` → se ignora (las piezas y el score siguen intactos).
 
 **Verificación manual:** juega una partida completa hasta perder y reinicia.
 Fuerza una victoria (temporalmente con `FixedSpawnStrategy(7)` en una config

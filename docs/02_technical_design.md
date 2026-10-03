@@ -302,7 +302,7 @@ DropSystem, MergeSystem y DangerSystem consultan is_playing() y no actúan.
 ### 8.5. Reinicio
 
 ```text
-restart_requested (GameUI o DropController, solo si GAME_OVER/VICTORY)
+restart_requested (GameUI o DropController, solo si GameState.is_finished())
   → Main._start_new_game():
       MergeSystem.reset()      cancela las fusiones pendientes
       DangerSystem.reset()     borra los contadores
@@ -387,7 +387,8 @@ referencia única. Resumen: `game/` (composición, estado y configuración),
 
 La arquitectura es defectuosa si aparece cualquiera de estos síntomas:
 
-- `Main` contiene un `if` sobre reglas de juego.
+- `Main` contiene un `if` sobre reglas de juego (las consultas como
+  `is_finished()` viven en `GameState`).
 - `Piece` referencia un sistema, `GameState` o la UI.
 - `GameUI` escribe en `GameState` o toca piezas.
 - `GameState` instancia nodos o accede a la física.
