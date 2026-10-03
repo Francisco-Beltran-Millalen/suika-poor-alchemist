@@ -1,6 +1,29 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://board/board.tscn" id="2_board"]
+[ext_resource type="Script" path="res://ui/drop_preview.gd" id="3_preview"]
+[ext_resource type="Script" path="res://systems/piece_spawner.gd" id="4_spawner"]
+[ext_resource type="Script" path="res://systems/drop_system.gd" id="5_drop"]
+[ext_resource type="Script" path="res://ui/drop_controller.gd" id="6_controller"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
+
+[node name="World" type="Node2D" parent="."]
+
+[node name="Board" parent="World" instance=ExtResource("2_board")]
+
+[node name="DropPreview" type="Node2D" parent="World"]
+script = ExtResource("3_preview")
+
+[node name="Systems" type="Node" parent="."]
+
+[node name="PieceSpawner" type="Node" parent="Systems"]
+script = ExtResource("4_spawner")
+
+[node name="DropSystem" type="Node" parent="Systems"]
+script = ExtResource("5_drop")
+
+[node name="DropController" type="Node" parent="."]
+script = ExtResource("6_controller")
