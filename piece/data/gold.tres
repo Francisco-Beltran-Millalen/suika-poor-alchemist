@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PieceData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://piece/piece_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://piece/data/enchanted_gold.tres" id="2_next"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"gold"
+level = 5
+display_name = "Oro"
+rarity_label = "Muy raro"
+radius = 46.0
+next_piece = ExtResource("2_next")
+score_value = 15
+color = Color(0.94902, 0.713725, 0.188235, 1)
+glow_strength = 0.3

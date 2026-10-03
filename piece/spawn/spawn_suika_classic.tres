@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="UniformSpawnStrategy" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://piece/spawn/uniform_spawn_strategy.gd" id="1_uniform"]
+
+[resource]
+script = ExtResource("1_uniform")
+max_level = 5

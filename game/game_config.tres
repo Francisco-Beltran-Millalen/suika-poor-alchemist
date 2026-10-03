@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="GameConfig" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://game/game_config.gd" id="1_config"]
+[ext_resource type="Resource" path="res://piece/spawn/spawn_suika_classic.tres" id="2_spawn"]
+[ext_resource type="Resource" path="res://piece/data/piece_catalog.tres" id="3_catalog"]
+
+[resource]
+script = ExtResource("1_config")
+container_width = 440.0
+container_height = 600.0
+wall_thickness = 32.0
+danger_line_y = 100.0
+spawn_y = 40.0
+drop_cooldown = 0.5
+aim_speed = 600.0
+spawn_strategy = ExtResource("2_spawn")
+rng_seed = 0
+game_over_delay = 1.0
+victory_bonus = 100
+piece_catalog = ExtResource("3_catalog")

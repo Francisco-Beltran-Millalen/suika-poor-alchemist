@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="WeightedSpawnStrategy" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://piece/spawn/weighted_spawn_strategy.gd" id="1_weighted"]
+
+[resource]
+script = ExtResource("1_weighted")
+weights = PackedFloat32Array(40, 25, 18, 11, 6)

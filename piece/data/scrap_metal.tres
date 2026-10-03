@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PieceData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://piece/piece_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://piece/data/copper.tres" id="2_next"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"scrap_metal"
+level = 2
+display_name = "Metal común"
+rarity_label = "Común"
+radius = 22.0
+next_piece = ExtResource("2_next")
+score_value = 3
+color = Color(0.541176, 0.435294, 0.352941, 1)
+glow_strength = 0.0

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PieceCatalog" load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://piece/piece_catalog.gd" id="1_cat"]
+[ext_resource type="Script" path="res://piece/piece_data.gd" id="10_data"]
+[ext_resource type="Resource" path="res://piece/data/trash.tres" id="2_trash"]
+[ext_resource type="Resource" path="res://piece/data/scrap_metal.tres" id="3_scrap_metal"]
+[ext_resource type="Resource" path="res://piece/data/copper.tres" id="4_copper"]
+[ext_resource type="Resource" path="res://piece/data/silver.tres" id="5_silver"]
+[ext_resource type="Resource" path="res://piece/data/gold.tres" id="6_gold"]
+[ext_resource type="Resource" path="res://piece/data/enchanted_gold.tres" id="7_enchanted_gold"]
+[ext_resource type="Resource" path="res://piece/data/celestial_matter.tres" id="8_celestial_matter"]
+[ext_resource type="Resource" path="res://piece/data/philosopher_stone.tres" id="9_philosopher_stone"]
+
+[resource]
+script = ExtResource("1_cat")
+pieces = Array[ExtResource("10_data")]([ExtResource("2_trash"), ExtResource("3_scrap_metal"), ExtResource("4_copper"), ExtResource("5_silver"), ExtResource("6_gold"), ExtResource("7_enchanted_gold"), ExtResource("8_celestial_matter"), ExtResource("9_philosopher_stone")])

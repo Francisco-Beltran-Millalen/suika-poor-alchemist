@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PieceData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://piece/piece_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://piece/data/silver.tres" id="2_next"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"copper"
+level = 3
+display_name = "Cobre"
+rarity_label = "Poco común"
+radius = 29.0
+next_piece = ExtResource("2_next")
+score_value = 6
+color = Color(0.784314, 0.392157, 0.176471, 1)
+glow_strength = 0.0

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PieceData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://piece/piece_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://piece/data/celestial_matter.tres" id="2_next"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"enchanted_gold"
+level = 6
+display_name = "Oro encantado"
+rarity_label = "Épico"
+radius = 56.0
+next_piece = ExtResource("2_next")
+score_value = 21
+color = Color(1, 0.827451, 0.419608, 1)
+glow_strength = 0.5

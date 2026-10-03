@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PieceData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://piece/piece_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://piece/data/philosopher_stone.tres" id="2_next"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"celestial_matter"
+level = 7
+display_name = "Material celestial"
+rarity_label = "Épico+"
+radius = 68.0
+next_piece = ExtResource("2_next")
+score_value = 28
+color = Color(0.482353, 0.423529, 1, 1)
+glow_strength = 0.75

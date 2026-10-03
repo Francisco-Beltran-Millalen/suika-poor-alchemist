@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PieceData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://piece/piece_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://piece/data/scrap_metal.tres" id="2_next"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"trash"
+level = 1
+display_name = "Basura"
+rarity_label = "Común"
+radius = 16.0
+next_piece = ExtResource("2_next")
+score_value = 1
+color = Color(0.419608, 0.388235, 0.345098, 1)
+glow_strength = 0.0
