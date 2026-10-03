@@ -944,3 +944,22 @@ estrategias de generación queden evaluadas.
 
 *(El agente implementador anota aquí cualquier cambio respecto a esta guía,
 con su motivo y la fase en que ocurrió.)*
+
+1. **Fase 3 — `DangerZone.EXTENSION_ABOVE`.** Se añade esta constante
+   pública (400 px) y `Board.WALL_EXTENSION_ABOVE` la referencia
+   (`= DangerZone.EXTENSION_ABOVE`). Motivo: `DangerZone` necesita el valor y
+   no puede depender de `Board` (referencia circular entre clases). El valor
+   y la API de `Board` no cambian.
+2. **Fase 4 — apuntado acotado a `[0, W]`.** El contrato dice que `DropSystem`
+   guarda el apuntado "sin limitar". `_set_aim` lo acota a `[0, container_width]`
+   (no por radio). Motivo: mantener `A`/`D` pulsada sin acotar acumularía
+   distancia invisible y el jugador tendría que "deshacerla" al invertir el
+   sentido. La recuperación de la X original al cambiar de pieza se conserva.
+3. **Fase 8 — pulso del halo.** `PieceVisual.draw_piece` calcula el pulso con
+   `Time.get_ticks_msec()` en lugar de recibir un parámetro nuevo, para no
+   cambiar su firma. Los iconos y la vista previa solo laten si algo los
+   redibuja; las piezas del tablero se redibujan cada frame (`glow ≥ 0.5`).
+4. **Fase 8 — paso 4 (pruebas de las tres estrategias) sin hacer.** Requiere
+   partidas humanas y notas de sensación en `docs/notas_playtest.md`; no se
+   han inventado. Los valores de `GameConfig` y `piece.tscn` no se han tocado.
+
