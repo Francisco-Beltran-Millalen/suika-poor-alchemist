@@ -1,7 +1,23 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://ui/game_ui.gd" id="1_ui"]
 [ext_resource type="Script" path="res://ui/piece_icon.gd" id="2_icon"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_end_view"]
+bg_color = Color(0.09, 0.06, 0.04, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.95, 0.72, 0.19, 0.9)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 28.0
+content_margin_top = 24.0
+content_margin_right = 28.0
+content_margin_bottom = 24.0
 
 [node name="GameUI" type="CanvasLayer"]
 script = ExtResource("1_ui")
@@ -79,6 +95,7 @@ anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_end_view")
 
 [node name="VBox" type="VBoxContainer" parent="Root/GameOverView"]
 custom_minimum_size = Vector2(320, 0)
@@ -113,6 +130,7 @@ anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_end_view")
 
 [node name="VBox" type="VBoxContainer" parent="Root/VictoryView"]
 custom_minimum_size = Vector2(320, 0)

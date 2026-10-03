@@ -5,6 +5,13 @@ extends Node2D
 const HALO_STEPS: int = 4
 const HALO_EXPANSION: float = 0.45
 const BORDER_WIDTH: float = 2.0
+## Desde este `glow_strength` el halo late suavemente.
+const PULSE_MIN_GLOW: float = 0.5
+const PULSE_AMPLITUDE: float = 0.12
+const PULSE_SPEED: float = 2.5
+## Los materiales sin brillo (comunes) se ven más opacos y grises.
+const DULL_DESATURATION: float = 0.25
+const DULL_HIGHLIGHT_ALPHA: float = 0.35
 
 var _data: PieceData
 var _alpha: float = 1.0
@@ -12,8 +19,12 @@ var _alpha: float = 1.0
 
 func _process(_delta: float) -> void:
 	# Sin textura el número y el reflejo deben quedar derechos aunque la pieza ruede.
-	if _data != null and _data.texture == null and global_rotation != 0.0:
+	if _data == null:
+		return
+	if _data.texture == null and global_rotation != 0.0:
 		global_rotation = 0.0
+	if _data.glow_strength >= PULSE_MIN_GLOW:
+		queue_redraw()
 
 
 func _draw() -> void:
@@ -35,6 +46,8 @@ func set_alpha(alpha: float) -> void:
 static func draw_piece(canvas: CanvasItem, data: PieceData, center: Vector2,
 		radius: float, alpha: float = 1.0) -> void:
 	var color: Color = data.color
+	if data.glow_strength <= 0.0:
+		color.s *= 1.0 - DULL_DESATURATION
 	color.a = alpha
 	_draw_halo(canvas, data, center, radius, alpha)
 	if data.texture != null:
@@ -47,7 +60,7 @@ static func draw_piece(canvas: CanvasItem, data: PieceData, center: Vector2,
 	border.a = alpha
 	canvas.draw_arc(center, radius, 0.0, TAU, 48, border, BORDER_WIDTH, true)
 	var highlight: Color = data.color.lightened(0.5)
-	highlight.a = alpha
+	highlight.a = alpha * (DULL_HIGHLIGHT_ALPHA if data.glow_strength <= 0.0 else 1.0)
 	canvas.draw_circle(center + Vector2(-0.35, -0.35) * radius, radius * 0.18, highlight)
 	_draw_level(canvas, data, center, radius, alpha)
 
@@ -58,7 +71,10 @@ static func _draw_halo(canvas: CanvasItem, data: PieceData, center: Vector2,
 		return
 	var halo: Color = data.color.lightened(0.4)
 	halo.a = 0.12 * data.glow_strength * alpha
-	var outer: float = radius * (1.0 + HALO_EXPANSION * data.glow_strength)
+	var pulse: float = 1.0
+	if data.glow_strength >= PULSE_MIN_GLOW:
+		pulse += PULSE_AMPLITUDE * sin(Time.get_ticks_msec() / 1000.0 * PULSE_SPEED)
+	var outer: float = radius * (1.0 + HALO_EXPANSION * data.glow_strength * pulse)
 	for step: int in range(HALO_STEPS, 0, -1):
 		var ring: float = lerpf(radius, outer, float(step) / HALO_STEPS)
 		canvas.draw_circle(center, ring, halo)

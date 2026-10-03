@@ -11,6 +11,7 @@ const DANGER_PULSE_SPEED: float = 12.0
 const _DANGER_COLOR := Color(0.95, 0.15, 0.2)
 const _GOLD := Color(1.0, 0.83, 0.42)
 const _RED := Color(0.91, 0.2, 0.24)
+const STONE_GROWTH: float = 1.8
 const _FLASH_RECT := Rect2(-2000.0, -2000.0, 6000.0, 5000.0)
 
 var _config: GameConfig
@@ -19,6 +20,10 @@ var _danger_ratio: float = 0.0
 var _time: float = 0.0
 var _flash_left: float = 0.0
 var _was_active: bool = false
+# Piedra fantasma de la victoria: crece y se desvanece sobre el punto de fusión.
+var _stone: PieceData
+var _stone_position: Vector2 = Vector2.ZERO
+var _stone_age: float = 0.0
 
 
 func _process(delta: float) -> void:
@@ -27,6 +32,10 @@ func _process(delta: float) -> void:
 		ring.age += delta
 	_rings = _rings.filter(func(ring: Ring) -> bool: return ring.age < ring.duration)
 	_flash_left = maxf(_flash_left - delta, 0.0)
+	if _stone != null:
+		_stone_age += delta
+		if _stone_age >= VICTORY_DURATION:
+			_stone = null
 	var active: bool = _is_active()
 	if active or _was_active:
 		queue_redraw()
@@ -41,6 +50,8 @@ func _draw() -> void:
 	for ring: Ring in _rings:
 		if ring.age >= 0.0:
 			_draw_ring(ring)
+	if _stone != null:
+		_draw_stone()
 	if _flash_left > 0.0:
 		draw_rect(_FLASH_RECT, Color(1.0, 1.0, 0.85, 0.6 * _flash_left / FLASH_DURATION))
 
@@ -55,7 +66,7 @@ func setup(state: GameState, merge_system: MergeSystem, danger_system: DangerSys
 
 
 func _is_active() -> bool:
-	return _danger_ratio > 0.0 or not _rings.is_empty() or _flash_left > 0.0
+	return _danger_ratio > 0.0 or not _rings.is_empty() or _flash_left > 0.0 or _stone != null
 
 
 func _draw_danger() -> void:
@@ -65,6 +76,12 @@ func _draw_danger() -> void:
 	var band := Color(_DANGER_COLOR, alpha * 0.18)
 	draw_rect(Rect2(0.0, line_y - 28.0, _config.container_width, 28.0), band)
 	draw_rect(Rect2(0.0, line_y - 3.0, _config.container_width, 6.0), Color(_DANGER_COLOR, alpha))
+
+
+func _draw_stone() -> void:
+	var t: float = _stone_age / VICTORY_DURATION
+	var scale_factor: float = lerpf(1.0, STONE_GROWTH, 1.0 - pow(1.0 - t, 2.0))
+	PieceVisual.draw_piece(self, _stone, _stone_position, _stone.radius * scale_factor, 1.0 - t)
 
 
 func _draw_ring(ring: Ring) -> void:
@@ -112,6 +129,7 @@ func _spawn_victory_particles(position: Vector2) -> void:
 func _clear_effects() -> void:
 	_rings.clear()
 	_flash_left = 0.0
+	_stone = null
 	for child: Node in get_children():
 		remove_child(child)
 		child.queue_free()
@@ -131,11 +149,14 @@ func _on_merge_system_pieces_merged(_source: PieceData, result: PieceData, posit
 
 func _on_merge_system_max_level_merged(source: PieceData, position: Vector2) -> void:
 	var delays: Array[float] = [0.0, 0.2, 0.4]
-	var colors: Array[Color] = [_GOLD, Color.WHITE, _RED]
+	var colors: Array[Color] = [source.color.lightened(0.3), Color.WHITE, _GOLD]
 	for i: int in delays.size():
 		_add_ring(position, colors[i], source.radius * 0.8, source.radius * 4.0,
 				VICTORY_DURATION - delays[i], delays[i])
 	_flash_left = FLASH_DURATION
+	_stone = source
+	_stone_position = position
+	_stone_age = 0.0
 	_spawn_victory_particles(position)
 
 
