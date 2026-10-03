@@ -16,6 +16,8 @@ var _generator: PieceGenerator
 @onready var _preview: DropPreview = $World/DropPreview
 @onready var _spawner: PieceSpawner = $Systems/PieceSpawner
 @onready var _drop_system: DropSystem = $Systems/DropSystem
+@onready var _merge_system: MergeSystem = $Systems/MergeSystem
+@onready var _progress_system: ProgressSystem = $Systems/ProgressSystem
 @onready var _drop_controller: DropController = $DropController
 
 
@@ -50,6 +52,10 @@ func get_drop_controller() -> DropController:
 	return _drop_controller
 
 
+func get_merge_system() -> MergeSystem:
+	return _merge_system
+
+
 func _compose() -> void:
 	_state = GameState.new()
 	_generator = PieceGenerator.new(config.piece_catalog, config.spawn_strategy, config.rng_seed)
@@ -58,14 +64,18 @@ func _compose() -> void:
 	_board.setup(config)
 	_spawner.setup(_board.pieces_root)
 	_drop_system.setup(_state, _generator, _spawner, _board, config)
+	_merge_system.setup(_state, _spawner, _board)
+	_progress_system.setup(_state, config, _merge_system)
 	_preview.setup(_state, _drop_system, config)
 	_drop_controller.aim_requested.connect(_drop_system.request_aim_global)
 	_drop_controller.aim_step_requested.connect(_drop_system.request_aim_step)
 	_drop_controller.drop_requested.connect(_drop_system.request_drop)
+	_spawner.piece_spawned.connect(_merge_system.register_piece)
 
 
 # Orden de `02` §8.5; se completa en las fases siguientes.
 func _start_new_game() -> void:
+	_merge_system.reset()
 	_board.clear_pieces()
 	_generator.reset()
 	_state.reset()
