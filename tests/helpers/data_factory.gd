@@ -31,3 +31,10 @@ static func make_config(catalog: PieceCatalog = null) -> GameConfig:
 	config.spawn_strategy = strategy
 	config.rng_seed = 1234
 	return config
+
+
+## Pieza lista para `add_child` (con `setup` ya llamado).
+static func make_piece(data: PieceData, state: Piece.State) -> Piece:
+	var piece := (load("res://piece/piece.tscn") as PackedScene).instantiate() as Piece
+	piece.setup(data, state)
+	return piece
