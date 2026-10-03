@@ -12,7 +12,7 @@ Estado: **arranque / inicialización**.
 
 | Aspecto        | Elección                                        |
 | -------------- | ----------------------------------------------- |
-| Motor          | Godot 4.7 (Forward+ / GL Compatibility)         |
+| Motor          | Godot 4.7 (GL Compatibility)                    |
 | Lenguaje       | GDScript con tipado estático obligatorio        |
 | Pruebas        | GUT (Godot Unit Test) en `addons/gut/`          |
 | Arquitectura   | Separación estricta Datos → Simulación → Presentación |
