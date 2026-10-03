@@ -14,12 +14,14 @@ var _generator: PieceGenerator
 @onready var _world: Node2D = $World
 @onready var _board: Board = $World/Board
 @onready var _preview: DropPreview = $World/DropPreview
+@onready var _effects: EffectsLayer = $World/EffectsLayer
 @onready var _spawner: PieceSpawner = $Systems/PieceSpawner
 @onready var _drop_system: DropSystem = $Systems/DropSystem
 @onready var _merge_system: MergeSystem = $Systems/MergeSystem
 @onready var _danger_system: DangerSystem = $Systems/DangerSystem
 @onready var _progress_system: ProgressSystem = $Systems/ProgressSystem
 @onready var _drop_controller: DropController = $DropController
+@onready var _ui: GameUI = $GameUI
 
 
 func _ready() -> void:
@@ -61,6 +63,10 @@ func get_danger_system() -> DangerSystem:
 	return _danger_system
 
 
+func get_ui() -> GameUI:
+	return _ui
+
+
 func _compose() -> void:
 	_state = GameState.new()
 	_generator = PieceGenerator.new(config.piece_catalog, config.spawn_strategy, config.rng_seed)
@@ -73,14 +79,18 @@ func _compose() -> void:
 	_danger_system.setup(_state, _board.danger_zone, config)
 	_progress_system.setup(_state, config, _merge_system)
 	_preview.setup(_state, _drop_system, config)
+	_effects.setup(_state, _merge_system, _danger_system, config)
+	_ui.setup(_state, config.piece_catalog)
 	_drop_controller.aim_requested.connect(_drop_system.request_aim_global)
 	_drop_controller.aim_step_requested.connect(_drop_system.request_aim_step)
 	_drop_controller.drop_requested.connect(_drop_system.request_drop)
 	_spawner.piece_spawned.connect(_merge_system.register_piece)
 	_state.status_changed.connect(_on_state_status_changed)
+	_ui.restart_requested.connect(_on_restart_requested)
+	_drop_controller.restart_requested.connect(_on_restart_requested)
 
 
-# Orden de `02` §8.5; se completa en las fases siguientes.
+# Orden de `02` §8.5. El primer arranque usa la misma función.
 func _start_new_game() -> void:
 	_merge_system.reset()
 	_danger_system.reset()
@@ -101,3 +111,9 @@ func _update_world_position() -> void:
 # La regla de "terminada" vive en `GameState`; aquí solo se congela el tablero.
 func _on_state_status_changed(_status: GameState.Status) -> void:
 	_board.set_frozen(_state.is_finished())
+
+
+# Solo se reinicia una partida terminada (la consulta vive en `GameState`).
+func _on_restart_requested() -> void:
+	if _state.is_finished():
+		_start_new_game()

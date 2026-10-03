@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://board/board.tscn" id="2_board"]
@@ -9,6 +9,8 @@
 [ext_resource type="Script" path="res://systems/merge_system.gd" id="7_merge"]
 [ext_resource type="Script" path="res://systems/progress_system.gd" id="8_progress"]
 [ext_resource type="Script" path="res://systems/danger_system.gd" id="9_danger"]
+[ext_resource type="Script" path="res://ui/effects_layer.gd" id="10_effects"]
+[ext_resource type="PackedScene" path="res://ui/game_ui.tscn" id="11_ui"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
@@ -19,6 +21,9 @@ script = ExtResource("1_main")
 
 [node name="DropPreview" type="Node2D" parent="World"]
 script = ExtResource("3_preview")
+
+[node name="EffectsLayer" type="Node2D" parent="World"]
+script = ExtResource("10_effects")
 
 [node name="Systems" type="Node" parent="."]
 
@@ -39,3 +44,5 @@ script = ExtResource("8_progress")
 
 [node name="DropController" type="Node" parent="."]
 script = ExtResource("6_controller")
+
+[node name="GameUI" parent="." instance=ExtResource("11_ui")]

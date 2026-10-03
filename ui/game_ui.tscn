@@ -1,0 +1,145 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://ui/game_ui.gd" id="1_ui"]
+[ext_resource type="Script" path="res://ui/piece_icon.gd" id="2_icon"]
+
+[node name="GameUI" type="CanvasLayer"]
+script = ExtResource("1_ui")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="LeftPanel" type="VBoxContainer" parent="Root"]
+layout_mode = 1
+offset_left = 32.0
+offset_top = 80.0
+offset_right = 340.0
+offset_bottom = 260.0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Root/LeftPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "El Alquimista Pobre"
+autowrap_mode = 2
+
+[node name="ScoreLabel" type="Label" parent="Root/LeftPanel"]
+layout_mode = 2
+text = "Puntuación"
+
+[node name="ScoreValue" type="Label" parent="Root/LeftPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "0"
+
+[node name="RightPanel" type="VBoxContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -280.0
+offset_top = 80.0
+offset_right = -32.0
+offset_bottom = 560.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="NextLabel" type="Label" parent="Root/RightPanel"]
+layout_mode = 2
+text = "Próximo"
+
+[node name="NextPiece" type="Control" parent="Root/RightPanel"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+script = ExtResource("2_icon")
+
+[node name="Legend" type="VBoxContainer" parent="Root/RightPanel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="GameOverView" type="PanelContainer" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="Root/GameOverView"]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Root/GameOverView/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "La transmutación ha fallado"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="FinalScore" type="Label" parent="Root/GameOverView/VBox"]
+layout_mode = 2
+text = "Puntuación final: 0"
+horizontal_alignment = 1
+
+[node name="RestartButton" type="Button" parent="Root/GameOverView/VBox"]
+layout_mode = 2
+text = "Reiniciar (R)"
+
+[node name="VictoryView" type="PanelContainer" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="Root/VictoryView"]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Root/VictoryView/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "¡Magnum Opus!"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Root/VictoryView/VBox"]
+layout_mode = 2
+text = "Has creado la Piedra Filosofal"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="FinalScore" type="Label" parent="Root/VictoryView/VBox"]
+layout_mode = 2
+text = "Puntuación final: 0"
+horizontal_alignment = 1
+
+[node name="RestartButton" type="Button" parent="Root/VictoryView/VBox"]
+layout_mode = 2
+text = "Reiniciar (R)"
+
+[node name="VictoryTimer" type="Timer" parent="."]
+one_shot = true
