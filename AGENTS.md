@@ -1,0 +1,107 @@
+# El Alquimista Pobre — Contexto del proyecto
+
+Puzzle de física y fusión inspirado en **Suika Game**, ambientado en un taller alquímico
+donde un alquimista chatarrero fusiona materiales de bajo valor (basura, metales comunes)
+hasta transmutar elementos legendarios (la Piedra Filosofal).
+
+Godot **4.7** · GDScript con **tipado estático obligatorio**.
+
+Documentos canónicos de diseño en `docs/`:
+- `docs/01_diseno_general.md` — Visión y bucle principal
+- `docs/02_technical_design.md` — Arquitectura técnica y desacoplamiento
+- `docs/03_data_design.md` — Recursos, datos y parámetros configurables
+- `docs/04_gameplay_design.md` — Mecánicas de juego y resolución de fusiones
+- `docs/el_alquimista_pobre_concepto.md` — Fantasía y progresión visual
+- `docs/RULES.md` — Convenciones de código y estilo obligatorio
+
+---
+
+## Comandos
+
+```bash
+# Tests con GUT (ejecución por línea de comandos)
+godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit
+
+# Ejecutar un solo archivo de test
+godot --headless -s addons/gut/gut_cmdln.gd -gtest=res://tests/unit/test_smoke.gd -gexit
+
+# Reimportar assets y actualizar caché de clases globales
+godot --headless --path . --import
+
+# Ejecutar la escena principal
+godot --path . --scene res://game/main.tscn
+
+# Ver formas de colisión durante la ejecución
+godot --path . --debug-collisions --scene res://game/main.tscn
+
+# Captura de fotogramas con Movie Maker (requiere ventana, no usar --headless)
+godot --path . --scene res://game/main.tscn \
+      --write-movie /tmp/mov/shot.png --fixed-fps 60 --quit-after 120
+```
+
+---
+
+## Principios de Arquitectura
+
+El diseño sigue estrictamente la separación de responsabilidades definida en `docs/02_technical_design.md`:
+
+```text
+DATOS
+  ↓
+SIMULACIÓN
+  ↓
+PRESENTACIÓN
+```
+
+- **Datos (`PieceData`, `GameConfig`):** Son `Resource` inmutables durante la simulación. No conocen la simulación ni la escena.
+- **Simulación (`Board`, `Piece`, `DropSystem`, `MergeSystem`, `DangerSystem`):** Gobiernan la física y las reglas de juego. Desconocen completamente la presentación y la UI.
+- **Presentación (`GameUI`):** Observa eventos y señales de la simulación. Traduce las entradas del jugador en intenciones o comandos hacia los sistemas. No contiene lógica de reglas ni de puntuación.
+- **Composition Root (`game/main.tscn` / `game/main.gd`):** La raíz `Main` es el único ensamblador de la partida. Conecta señales e inyecta dependencias. Nunca usar rutas absolutas como `get_node("/root/...")`.
+- **Autoloads mínimos:** No usar autoloads como contenedores globales de conveniencia. El estado de la partida vive en su árbol de composición.
+- **Límite duro de 400 líneas por archivo:** No crear archivos que superen 400 líneas; modularizar mediante componentes o sistemas específicos.
+
+---
+
+## Estructura de Directorios
+
+Organización guiada por dominio (siguiendo §33 de `docs/02_technical_design.md`):
+
+```text
+res://
+├── game/                            # Composition root y estado de sesión
+│   ├── main.tscn / main.gd
+│   ├── game_state.gd
+│   └── game_config.tres
+├── board/                           # Recipiente físico y zona de peligro
+│   ├── board.tscn / board.gd
+│   └── danger_zone.tscn / danger_zone.gd
+├── piece/                           # Pieza física y recurso descriptor
+│   ├── piece.tscn / piece.gd
+│   └── piece_data.gd
+├── systems/                         # Sistemas de simulación independientes
+│   ├── drop_system.gd
+│   ├── merge_system.gd
+│   └── danger_system.gd
+├── ui/                              # Capa de presentación y HUD
+│   ├── game_ui.tscn
+│   └── game_ui.gd
+├── assets/                          # Sprites, shaders, audio, fuentes
+├── tests/                           # Tests automatizados con GUT
+│   ├── unit/                        # Tests unitarios
+│   └── integration/                 # Tests de integración
+├── addons/                          # Dependencias de terceros (addons/gut/)
+├── docs/                            # Documentación y GDDs (.gdignore)
+│   ├── .gdignore
+│   ├── RULES.md
+│   └── *.md
+└── project.godot
+```
+
+---
+
+## Cómo trabajar aquí
+
+1. **El motor primero:** Antes de crear lógica personalizada para física, áreas o colisiones, aprovechar los nodos y capacidades nativas de Godot (`RigidBody2D`, `Area2D`, `CollisionShape2D`, etc.).
+2. **Tipado estático obligatorio:** Todo método debe definir tipos de parámetros y valor de retorno (`-> void`, `-> bool`, etc.). Variables tipadas explícitamente (`var x: int = 0`), usando `:=` solo cuando la inferencia es inmediata.
+3. **Tests:** Toda nueva lógica de simulación (fusión, detección de peligro, límites de colocación) debe acompañarse de sus tests GUT en `tests/unit/` o `tests/integration/`.
+4. **Commits en español con ámbito:** Formato `type(ámbito): qué cambia, en español` (ej. `feat(merge): resolución de colisiones entre piezas iguales`).

@@ -1,0 +1,27 @@
+# ============================================================
+# Godot 4
+# ============================================================
+
+# Caché de import y datos del editor (se regenera automáticamente)
+.godot/
+
+# Build de Android
+/android/
+
+# Presets de exportación
+export_presets.cfg
+
+# Traducciones compiladas
+*.translation
+
+# Builds
+/dist/
+
+# ============================================================
+# Sistema y editor local
+# ============================================================
+
+.DS_Store
+Thumbs.db
+*~
+.claude/settings.local.json
