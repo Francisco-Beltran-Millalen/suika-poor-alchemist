@@ -7,7 +7,6 @@ const _COOLDOWN_ALPHA: float = 0.4
 
 var _state: GameState
 var _config: GameConfig
-var _drop_system: DropSystem
 var _aim_x: float = 0.0
 var _is_ready: bool = true
 
@@ -27,7 +26,6 @@ func _draw() -> void:
 
 func setup(state: GameState, drop_system: DropSystem, config: GameConfig) -> void:
 	_state = state
-	_drop_system = drop_system
 	_config = config
 	_aim_x = drop_system.get_aim_x()
 	state.current_piece_changed.connect(_on_state_current_piece_changed)

@@ -10,6 +10,12 @@ func _has_error(errors: PackedStringArray, fragment: String) -> bool:
 	return false
 
 
+# Los ciclos de Resource no los libera el conteo de referencias: se rompen al terminar.
+func _break_cycles(catalog: PieceCatalog) -> void:
+	for piece: PieceData in catalog.pieces:
+		piece.next_piece = null
+
+
 func test_valid_catalog_has_no_errors() -> void:
 	assert_eq(PieceCatalogValidator.validate(DataFactory.make_catalog()).size(), 0)
 
@@ -85,6 +91,7 @@ func test_non_null_next_piece_at_end() -> void:
 	var catalog: PieceCatalog = DataFactory.make_catalog()
 	catalog.pieces[7].next_piece = catalog.pieces[0]
 	assert_true(_has_error(PieceCatalogValidator.validate(catalog), "debe ser null en el último"))
+	_break_cycles(catalog)
 
 
 func test_level_jump() -> void:
@@ -97,6 +104,7 @@ func test_self_reference() -> void:
 	var catalog: PieceCatalog = DataFactory.make_catalog()
 	catalog.pieces[1].next_piece = catalog.pieces[1]
 	assert_true(_has_error(PieceCatalogValidator.validate(catalog), "next_piece.level"))
+	_break_cycles(catalog)
 
 
 func test_next_piece_outside_catalog() -> void:

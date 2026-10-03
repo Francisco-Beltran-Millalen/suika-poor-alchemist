@@ -25,7 +25,6 @@ func _draw() -> void:
 		return
 	var width: float = _config.container_width
 	var height: float = _config.container_height
-	var t: float = _config.wall_thickness
 	draw_rect(Rect2(0.0, 0.0, width, height), _BACKGROUND_COLOR)
 	for rect: Rect2 in _wall_rects():
 		_draw_wall(rect)

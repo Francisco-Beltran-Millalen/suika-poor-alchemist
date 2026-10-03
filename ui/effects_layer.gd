@@ -88,13 +88,13 @@ func _draw_ring(ring: Ring) -> void:
 	var t: float = ring.age / ring.duration
 	var radius: float = lerpf(ring.start_radius, ring.end_radius, 1.0 - pow(1.0 - t, 2.0))
 	var color := Color(ring.color, 1.0 - t)
-	draw_arc(ring.position, radius, 0.0, TAU, 48, color, lerpf(5.0, 1.0, t), true)
+	draw_arc(ring.center, radius, 0.0, TAU, 48, color, lerpf(5.0, 1.0, t), true)
 
 
-func _add_ring(position: Vector2, color: Color, start_radius: float, end_radius: float,
+func _add_ring(center: Vector2, color: Color, start_radius: float, end_radius: float,
 		duration: float, delay: float = 0.0) -> void:
 	var ring := Ring.new()
-	ring.position = position
+	ring.center = center
 	ring.color = color
 	ring.start_radius = start_radius
 	ring.end_radius = end_radius
@@ -104,9 +104,9 @@ func _add_ring(position: Vector2, color: Color, start_radius: float, end_radius:
 	queue_redraw()
 
 
-func _spawn_victory_particles(position: Vector2) -> void:
+func _spawn_victory_particles(center: Vector2) -> void:
 	var particles := CPUParticles2D.new()
-	particles.position = position
+	particles.position = center
 	particles.one_shot = true
 	particles.amount = 120
 	particles.lifetime = 1.2
@@ -142,22 +142,22 @@ func _on_state_status_changed(status: GameState.Status) -> void:
 		_clear_effects()
 
 
-func _on_merge_system_pieces_merged(_source: PieceData, result: PieceData, position: Vector2) -> void:
-	_add_ring(position, result.color.lightened(0.3), result.radius * 0.8, result.radius * 2.0,
+func _on_merge_system_pieces_merged(_source: PieceData, result: PieceData, merge_position: Vector2) -> void:
+	_add_ring(merge_position, result.color.lightened(0.3), result.radius * 0.8, result.radius * 2.0,
 			MERGE_RING_DURATION)
 
 
-func _on_merge_system_max_level_merged(source: PieceData, position: Vector2) -> void:
+func _on_merge_system_max_level_merged(source: PieceData, merge_position: Vector2) -> void:
 	var delays: Array[float] = [0.0, 0.2, 0.4]
 	var colors: Array[Color] = [source.color.lightened(0.3), Color.WHITE, _GOLD]
 	for i: int in delays.size():
-		_add_ring(position, colors[i], source.radius * 0.8, source.radius * 4.0,
+		_add_ring(merge_position, colors[i], source.radius * 0.8, source.radius * 4.0,
 				VICTORY_DURATION - delays[i], delays[i])
 	_flash_left = FLASH_DURATION
 	_stone = source
-	_stone_position = position
+	_stone_position = merge_position
 	_stone_age = 0.0
-	_spawn_victory_particles(position)
+	_spawn_victory_particles(merge_position)
 
 
 func _on_danger_system_danger_changed(ratio: float) -> void:
@@ -166,7 +166,7 @@ func _on_danger_system_danger_changed(ratio: float) -> void:
 
 
 class Ring extends RefCounted:
-	var position: Vector2
+	var center: Vector2
 	var color: Color
 	var start_radius: float
 	var end_radius: float
