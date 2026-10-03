@@ -54,8 +54,15 @@ godot --path . --scene res://game/main.tscn --write-movie /tmp/mov/shot.png --fi
 - **Tiempo:** los sistemas con lógica temporal exponen un `tick(delta)`
   público, llamado desde `_physics_process`. Los tests unitarios lo llaman
   directamente.
+- **Cola vacía:** `GameState.reset()` emite `current_piece_changed(null)` y
+  `next_piece_changed(null)`. **Todo observador de esas señales debe aceptar
+  `null`** (no dibujar, no limitar) y tiene un test que lo comprueba.
 - **Ayudas de test:** van en `tests/helpers/`, **sin `class_name`**, y se
   cargan con `preload(...)`.
+- **Config de los tests de integración:** `var cfg := load("res://game/game_config.tres").duplicate()`
+  y se le reemplaza `spawn_strategy` (p. ej. por `FixedSpawnStrategy`) y
+  `rng_seed`. Así el catálogo real (con `philosopher_stone`) está disponible.
+  Se asigna a `main.config` **antes** de `add_child`.
 
 ---
 
@@ -97,6 +104,12 @@ infraestructura de tests.
    - `stub_danger_zone.gd` (fase 3): extiende `DangerZone`, con
      `var pieces: Array[Piece]` y un `get_pieces_inside()` sobrescrito que la
      devuelve.
+   - `board_rig.gd` (fase 4): `static func make(test: GutTest, config: GameConfig) -> Dictionary`.
+     Instancia `board.tscn` con `test.add_child_autofree` (los `@onready`
+     necesitan el árbol), llama a `board.setup(config)`, crea un
+     `PieceSpawner` (`setup(board.pieces_root)`) y un `GameState` ya en
+     `PLAYING`. Devuelve `{board, spawner, state}`. Lo usan los tests
+     unitarios de `DropSystem`, `MergeSystem` y la física.
 4. Comprueba que `test_smoke.gd` pasa.
 
 **Hecho cuando:** el proyecto importa sin errores y GUT pasa.
@@ -267,8 +280,12 @@ func reset() -> void            # si rng_seed != 0, vuelve a sembrar con la mism
 func set_strategy(strategy: SpawnStrategy) -> void
 ```
 
-- Las señales se emiten **solo si el valor cambia**. La excepción es
-  `reset()`, que emite las cuatro siempre.
+- `score_changed` y `status_changed` se emiten **solo si el valor cambia**.
+- `current_piece_changed` y `next_piece_changed` se emiten **siempre** en
+  `set_queue` y `advance_queue`, aunque el recurso sea el mismo. El
+  generador repite tipos a menudo, y los observadores deben enterarse de
+  cada avance de la cola.
+- `reset()` emite las cuatro siempre.
 - `rng_seed == 0` → `rng.randomize()`.
 
 ### Tests
@@ -279,7 +296,7 @@ func set_strategy(strategy: SpawnStrategy) -> void
     (`watch_signals`, `assert_signal_emit_count`);
   - `add_score` suma y emite solo en `PLAYING`;
   - `advance_queue` devuelve el ACTUAL saliente, desplaza la cola y emite
-    ambas señales;
+    ambas señales, **también cuando el nuevo valor es el mismo recurso**;
   - `reset` deja score 0, cola nula y `READY`, y emite las 4 señales.
 - `test_piece_generator.gd`:
   - con la misma semilla, dos generadores producen la misma secuencia de 50;
@@ -349,7 +366,9 @@ func get_pieces_inside() -> Array[Piece] # get_overlapping_bodies() filtrados a 
 - `piece.tscn`: `Piece (RigidBody2D)`, con hijos `CollisionShape2D` **sin
   shape** y `Visual (Node2D, piece_visual.gd)`. Propiedades del cuerpo:
   - `collision_layer = 2`, `collision_mask = 3`;
-  - `contact_monitor = true`, `max_contacts_reported = 8`;
+  - `contact_monitor = true`, `max_contacts_reported = 16` (una pieza grande
+    rodeada de pequeñas supera fácilmente 8 contactos, y se perderían
+    fusiones);
   - `continuous_cd = CCD_MODE_CAST_SHAPE`;
   - `linear_damp = 0.1`, `angular_damp = 0.8`;
   - `disable_mode = DISABLE_MODE_MAKE_STATIC`;
@@ -411,7 +430,10 @@ suya.
     reposa en `y ≈ H − r` (±2 px) en menos de 3 s;
   - dos piezas que caen una sobre otra emiten `contact_detected`;
   - `DangerZone.get_pieces_inside()` incluye una pieza congelada
-    (`freeze = true`) en `y = 50` y excluye otra en `y = 400`;
+    (`freeze = true`, `freeze_mode = FREEZE_MODE_STATIC` explícito) en
+    `y = 50` y excluye otra en `y = 400`. Espera **al menos 2 frames de
+    física** tras `add_child` antes de consultar, porque los solapes se
+    actualizan después del paso;
   - con el tablero congelado, una pieza no se mueve en 30 frames.
 
 **Commit:** `feat(tablero): Piece, PieceVisual, Board y DangerZone construidos desde GameConfig`
@@ -446,7 +468,7 @@ func request_aim_global(global_x: float) -> void   # convierte con board.to_loca
 func request_aim_step(direction: float, delta: float) -> void   # aim += dir · aim_speed · delta
 func request_drop() -> bool                  # 04 §5; false si se ignoró
 func tick(delta: float) -> void              # cooldown; al llegar a 0 → drop_ready_changed(true)
-func get_aim_x() -> float                    # siempre limitado por el radio del ACTUAL
+func get_aim_x() -> float                    # aim sin limitar → clamp con el radio del ACTUAL (o W/2 si es null)
 func is_drop_ready() -> bool
 
 # ui/drop_controller.gd
@@ -469,7 +491,13 @@ func setup(state: GameState, drop_system: DropSystem, config: GameConfig) -> voi
 class_name Main extends Node
 @export var config: GameConfig = preload("res://game/game_config.tres")
 const BOARD_TOP_MARGIN: float = 80.0
-func get_state() -> GameState           # para los tests de integración
+# Getters para los tests de integración (solo lectura; ningún componente del juego los usa):
+func get_state() -> GameState
+func get_board() -> Board
+func get_spawner() -> PieceSpawner
+func get_drop_system() -> DropSystem
+func get_merge_system() -> MergeSystem
+func get_danger_system() -> DangerSystem
 # _ready: errores = GameConfigValidator.validate(config); si hay → push_error de cada uno y return
 #         _compose(); _start_new_game()
 ```
@@ -484,18 +512,23 @@ func get_state() -> GameState           # para los tests de integración
    `piece_dropped`.
 6. Devuelve `true`.
 
-`DropSystem` también se suscribe a `state.current_piece_changed` para volver a
-limitar el apuntado cuando cambia el radio del ACTUAL.
+**Apuntado:** `DropSystem` guarda `_aim_x` **sin limitar** (la intención del
+jugador) y limita solo al leerlo, en `get_aim_x()` y al soltar. Así, al pasar
+a una pieza más pequeña se recupera la posición original. Se suscribe a
+`state.current_piece_changed` para emitir `aim_changed(get_aim_x())` cuando
+cambia el radio. Si el dato es `null`, no hace nada.
 
 ### Pasos
 
 1. Escribe el spawner, el `DropSystem`, el controlador y la vista previa.
 2. Crea `game/main.tscn` con el árbol de `02` §5, de momento sin `GameUI`
-   ni `EffectsLayer`.
+   ni `EffectsLayer`. Crea `tests/helpers/board_rig.gd`.
 3. En `main.gd`:
    - `_compose()`:
      - crea `GameState` y `PieceGenerator`;
-     - coloca `World` en `((viewport_w − container_width)/2, BOARD_TOP_MARGIN)`;
+     - coloca `World` en `((get_viewport().get_visible_rect().size.x − container_width)/2, BOARD_TOP_MARGIN)`
+     y lo vuelve a colocar con `get_viewport().size_changed`, porque con
+     `stretch/aspect="expand"` el ancho visible cambia según la ventana;
      - llama a `board.setup`, `spawner.setup`, `drop.setup` y
        `preview.setup`;
      - conecta `DropController` → `DropSystem`.
@@ -509,7 +542,7 @@ limitar el apuntado cuando cambia el radio del ACTUAL.
   - `spawn` añade una hija en la posición y el estado pedidos y emite
     `piece_spawned`;
   - `despawn` la quita en el mismo frame.
-- `test_drop_system.gd` (unit, llamando a `tick()` directamente):
+- `test_drop_system.gd` (unit, con `board_rig` y llamando a `tick()` directamente):
   - `request_drop` devuelve `false` en `READY` y en `GAME_OVER`;
   - en `PLAYING` crea una pieza en `(clamp, spawn_y)` con estado
     `DROPPING`, avanza la cola y emite `piece_dropped`;
@@ -518,7 +551,10 @@ limitar el apuntado cuando cambia el radio del ACTUAL.
   - `drop_ready_changed` se emite al empezar y al terminar el cooldown;
   - apuntar a `x = −1000` → `get_aim_x() == radius_actual`;
   - si el ACTUAL pasa a ser más grande, el apuntado se vuelve a limitar y
-    emite `aim_changed`;
+    emite `aim_changed`; si luego vuelve a ser pequeño, se recupera la X
+    original;
+  - `state.reset()` (ACTUAL nulo) no provoca errores y `get_aim_x()`
+    devuelve W/2;
   - `request_aim_step(1, 0.1)` desplaza 60 px.
 
 **Verificación manual:** ejecuta el juego, apunta con el ratón y con A/D, y
@@ -586,8 +622,8 @@ crees ni elimines cuerpos aquí):
 
 ### Tests
 
-- `test_merge_system.gd` (unit, con piezas en un `Node2D` raíz y
-  `handle_contact`/`tick` llamados directamente):
+- `test_merge_system.gd` (unit, con `board_rig`, piezas creadas con su
+  spawner y `handle_contact`/`tick` llamados directamente):
   - mismo `data` → ambas `CONSUMED` y `get_pending_count() == 1`;
   - distinto `data` → no cambia nada;
   - `handle_contact(a, a)` → se ignora;
@@ -607,9 +643,9 @@ crees ni elimines cuerpos aquí):
 - `test_progress_system.gd`:
   - `pieces_merged` suma `result.score_value`;
   - `max_level_merged` suma `victory_bonus` y pasa a `VICTORY`.
-- `test_merge_integration.gd` (instancia `main.tscn` con una config de test:
-  `FixedSpawnStrategy(1)` y semilla fija; asigna `config` **antes** de
-  `add_child`):
+- `test_merge_integration.gd` (`main.tscn` con la config de integración y
+  `FixedSpawnStrategy(1)`; las piezas extra se crean con
+  `main.get_spawner()`):
   - dos soltadas en la misma X, esperando el cooldown → en menos de 3 s
     queda exactamente 1 pieza de nivel 2 y el score es 3;
   - cascada: una pieza de nivel 2 en el suelo y dos de nivel 1 encima →
@@ -716,8 +752,13 @@ GameUI (CanvasLayer)
                                                FinalScore, RestartButton
 ```
 
-- `VictoryView` aparece 1.5 s después de `VICTORY`, para no tapar la
-  animación.
+- `VictoryView` aparece `victory_view_delay` segundos después de `VICTORY`
+  (`@export var victory_view_delay: float = 1.5` en `GameUI`), para no tapar
+  la animación. El retardo usa un `Timer` hijo.
+- **Cualquier cambio de estado distinto de `VICTORY`/`GAME_OVER` oculta
+  ambas vistas y detiene ese `Timer`.** Si no, una victoria reiniciada con
+  `R` antes de 1.5 s mostraría la pantalla encima de la nueva partida.
+- Los observadores de `next_piece_changed` aceptan `null` (`PieceIcon` vacío).
 - **Todos los contenedores no interactivos usan `mouse_filter = IGNORE`**;
   si no, se comerían los clics de soltado.
 
@@ -740,16 +781,25 @@ GameUI (CanvasLayer)
   - la leyenda tiene 8 entradas en orden;
   - `GAME_OVER` muestra `GameOverView`;
   - pulsar `RestartButton` (`pressed.emit()`) emite `restart_requested`;
-  - `VictoryView` aparece tras `VICTORY` (pasados 1.5 s).
+  - con `victory_view_delay = 0.05`, `VictoryView` aparece tras `VICTORY`;
+  - `VICTORY` y `reset()` + `start()` antes del retardo → `VictoryView` nunca
+    aparece y ambas vistas quedan ocultas;
+  - `reset()` (cola nula) no provoca errores.
 - `test_session_integration.gd` (`main.tscn`):
-  - **victoria**: dos `philosopher_stone` creadas con el spawner, en contacto
-    sobre el suelo → `VICTORY`, score igual a `victory_bonus` y tablero
+  - **victoria**: dos piezas `catalog.get_by_level(catalog.get_max_level())`
+    creadas con `main.get_spawner()`, en contacto sobre el suelo → `VICTORY`, score igual a `victory_bonus` y tablero
     congelado;
   - **reinicio** tras Game Over → 0 piezas, score 0, `PLAYING`,
     `get_pending_count() == 0`, tablero descongelado y ACTUAL/PRÓXIMO no
     nulos;
-  - **reinicio con fusión pendiente**: provocar `handle_contact` y reiniciar
-    antes del `tick` → ninguna pieza aparece en los 10 frames siguientes;
+  - **reinicio con fusión pendiente**, en el mismo frame y sin esperar:
+    1. en `PLAYING`, crear dos piezas iguales y llamar a
+       `get_merge_system().handle_contact(a, b)` (pendiente = 1);
+    2. `get_state().set_game_over()`;
+    3. emitir `restart_requested`.
+
+    Resultado esperado: pendiente = 0 y ninguna pieza aparece en los 10
+    frames siguientes;
   - `restart_requested` durante `PLAYING` → se ignora.
 
 **Verificación manual:** juega una partida completa hasta perder y reinicia.

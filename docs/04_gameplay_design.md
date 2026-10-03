@@ -90,9 +90,10 @@ Al soltar:
    soltado.
 
 El límite del paso 1 también se aplica a la vista previa mientras se apunta,
-de modo que el jugador ve exactamente dónde caerá. Si al terminar el cooldown
-el nuevo material actual es más grande, la posición se vuelve a limitar con su
-radio.
+de modo que el jugador ve exactamente dónde caerá. Cada vez que cambia el
+material actual, la posición se limita con su radio. La posición elegida por
+el jugador se conserva sin limitar, así que al pasar a un material más pequeño
+vuelve a donde el jugador apuntó.
 
 Al soltar no se otorgan puntos.
 
@@ -124,7 +125,10 @@ Cada pieza del recipiente tiene un estado de juego:
 | `ACTIVE`   | Ya tocó algo (suelo, pared u otra pieza)                 | Sí                  | Sí               |
 | `CONSUMED` | Aceptada para una fusión; pendiente de eliminación       | No                  | No               |
 
-- `DROPPING → ACTIVE`: en el primer contacto físico con cualquier cuerpo.
+- `DROPPING → ACTIVE`: en el primer contacto físico con cualquier cuerpo,
+  **incluidas las paredes**. Una pieza soltada pegada a la pared pasa a
+  `ACTIVE` casi al instante, sobre la línea. Es aceptable, porque sale de la
+  zona en mucho menos que `game_over_delay`.
 - Las piezas creadas por fusión nacen directamente en `ACTIVE`.
 - `CONSUMED` es terminal.
 

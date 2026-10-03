@@ -241,7 +241,7 @@ parámetros viven en la escena `piece.tscn`, no en `PieceData`:
 | `angular_damp`           | 0.8                                             |
 | `continuous_cd`          | `CCD_MODE_CAST_SHAPE`                           |
 | `contact_monitor`        | `true`                                          |
-| `max_contacts_reported`  | 8                                               |
+| `max_contacts_reported`  | 16                                              |
 | Gravedad                 | la del proyecto (980 px/s²)                     |
 
 **La masa no es un dato:** se deriva del radio con

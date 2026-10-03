@@ -171,7 +171,9 @@ Como `Board`, `DropPreview` y `EffectsLayer` son hijos de `World` en (0, 0),
 comparten ese sistema sin conversiones. Solo el ratón requiere convertir desde
 coordenadas globales (lo hace `DropSystem` con `board.to_local()`).
 
-`Main` coloca `World` en `((viewport_w − container_width) / 2, 80)`.
+`Main` coloca `World` en `((ancho_visible − container_width) / 2, 80)` y lo
+recoloca en `size_changed` (con `stretch/aspect="expand"` el ancho visible
+varía).
 
 ---
 
@@ -318,8 +320,9 @@ El primer arranque usa la misma función.
 
 ## 9. Detalles del motor que la implementación debe respetar
 
-1. **`contact_monitor = true` y `max_contacts_reported > 0`** en `Piece`; sin
-   eso, `body_entered` nunca se emite.
+1. **`contact_monitor = true` y `max_contacts_reported = 16`** en `Piece`;
+   sin eso, `body_entered` nunca se emite, y con un valor bajo se pierden
+   contactos de las piezas grandes.
 2. **Forma única por instancia:** `Piece` crea un `CircleShape2D.new()` propio
    en `_ready()`. Si se modificara el `radius` del sub-recurso de
    `piece.tscn`, cambiaría en todas las instancias, porque se comparte.
