@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://board/board.tscn" id="2_board"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://ui/drop_controller.gd" id="6_controller"]
 [ext_resource type="Script" path="res://systems/merge_system.gd" id="7_merge"]
 [ext_resource type="Script" path="res://systems/progress_system.gd" id="8_progress"]
+[ext_resource type="Script" path="res://systems/danger_system.gd" id="9_danger"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
@@ -29,6 +30,9 @@ script = ExtResource("5_drop")
 
 [node name="MergeSystem" type="Node" parent="Systems"]
 script = ExtResource("7_merge")
+
+[node name="DangerSystem" type="Node" parent="Systems"]
+script = ExtResource("9_danger")
 
 [node name="ProgressSystem" type="Node" parent="Systems"]
 script = ExtResource("8_progress")
