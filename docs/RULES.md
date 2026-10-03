@@ -71,36 +71,33 @@ La carpeta `docs/` se excluye de la importación con `.gdignore`.
 
 ```text
 res://
-├── game/                            # Composition root y estado de sesión
+├── game/                            # Composition root, estado de sesión y configuración
 │   ├── main.tscn / main.gd
 │   ├── game_state.gd
+│   ├── game_config.gd / game_config_validator.gd
 │   └── game_config.tres
 ├── board/                           # Recipiente físico y zona de peligro
 │   ├── board.tscn / board.gd
 │   └── danger_zone.tscn / danger_zone.gd
-├── piece/                           # Pieza física y recurso descriptor
-│   ├── piece.tscn / piece.gd
-│   └── piece_data.gd
-├── systems/                         # Sistemas desacoplados de simulación
-│   ├── drop_system.gd
-│   ├── merge_system.gd
-│   └── danger_system.gd
-├── ui/                              # Capa de presentación y HUD
-│   ├── game_ui.tscn
-│   └── game_ui.gd
-├── assets/                          # Sprites, fuentes, shaders, audio
-├── tests/                           # Suite de pruebas con GUT
+├── piece/                           # Pieza física, visual y recursos descriptores
+│   ├── piece.tscn / piece.gd / piece_visual.gd
+│   ├── piece_data.gd / piece_catalog.gd / piece_catalog_validator.gd
+│   ├── data/                        # 8 materiales (.tres) + piece_catalog.tres
+│   └── spawn/                       # Estrategias de generación + presets (.tres)
+├── systems/                         # Sistemas de simulación independientes
+│   ├── piece_generator.gd / piece_spawner.gd
+│   ├── drop_system.gd / merge_system.gd
+│   └── danger_system.gd / progress_system.gd
+├── ui/                              # Presentación, input y efectos
+│   ├── drop_controller.gd / drop_preview.gd / effects_layer.gd / piece_icon.gd
+│   └── game_ui.tscn / game_ui.gd
+├── assets/                          # Sprites, shaders, audio, fuentes
+├── tests/                           # Tests automatizados con GUT
 │   ├── unit/
-│   └── integration/
-├── addons/                          # Herramientas de terceros (addons/gut/)
-├── docs/                            # Documentación y diseño (.gdignore)
-│   ├── .gdignore
-│   ├── RULES.md
-│   ├── 01_diseno_general.md
-│   ├── 02_technical_design.md
-│   ├── 03_data_design.md
-│   ├── 04_gameplay_design.md
-│   └── el_alquimista_pobre_concepto.md
+│   ├── integration/
+│   └── helpers/                     # Datos de test y stubs (sin class_name)
+├── addons/                          # Dependencias de terceros (addons/gut/)
+├── docs/                            # Documentación y GDDs (.gdignore)
 └── project.godot
 ```
 
@@ -146,7 +143,7 @@ Basado en la [guía de estilo oficial de Godot 4](https://docs.godotengine.org/e
 
 - **Dirección de dependencias:**
   ```text
-  DATOS → SIMULACIÓN → PRESENTACIÓN
+  PRESENTACIÓN ──▶ SIMULACIÓN ──▶ DATOS      (A ──▶ B = "A depende de B")
   ```
   - Los datos (`PieceData`, `GameConfig`) no conocen la simulación.
   - La simulación ejecuta reglas físicas y de juego, pero desconoce la presentación.
@@ -154,7 +151,7 @@ Basado en la [guía de estilo oficial de Godot 4](https://docs.godotengine.org/e
 - **Composition Root:** `Main` (`game/main.tscn`) ensambla componentes y conecta señales. Los componentes internos no usan rutas duras globales como `get_node("/root/Main/...")`.
 - **Autoloads mínimos:** No usar autoloads como contenedores de lógica local o atajos rápidos. El estado de la partida vive en la composición.
 - **Señales:** Preferir señales a llamadas descendentes o cruzadas no acopladas.
-- **Límite duro:** Ningún archivo nuevo debe superar las **400 líneas**.
+- **Límite duro:** Ningún archivo de código ni de documentación permanente debe superar las **400 líneas**. Los planes de implementación temporales están exentos.
 - **Doc comments:** Comentarios de API con `##`, comentarios internos explicativos con `#` enfocados en el *por qué*.
 
 ---

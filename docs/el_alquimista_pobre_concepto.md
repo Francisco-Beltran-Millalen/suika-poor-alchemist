@@ -19,11 +19,27 @@ La progresión no consiste solamente en cambiar de objeto, sino en
 mostrar visualmente que el material obtenido es cada vez más raro,
 valioso y difícil de conseguir.
 
-Una posible progresión conceptual va desde:
+La progresión conceptual va desde:
 
 **basura → material común → material refinado → material valioso →
 material raro → material muy raro → material excepcional → material
 legendario**
+
+Y se concreta en esta cadena de ocho materiales (referencia visual:
+`El Alquimista Pobre_ De Basura a Leyenda.png`):
+
+| Nivel | Material           | Rareza     | Descripción                          |
+| ----- | ------------------ | ---------- | ------------------------------------ |
+| 1     | Basura             | Común      | Objetos inútiles y desechos comunes. |
+| 2     | Metal común        | Común      | Fragmentos de metal sin refinar.     |
+| 3     | Cobre              | Poco común | Metal básico y útil.                 |
+| 4     | Plata              | Raro       | Metal refinado y valioso.            |
+| 5     | Oro                | Muy raro   | Metal precioso de gran valor.        |
+| 6     | Oro encantado      | Épico      | Oro con propiedades mágicas.         |
+| 7     | Material celestial | Épico+     | Sustancia extremadamente rara y poderosa. |
+| 8     | Piedra Filosofal   | Legendario | Material legendario de gran poder alquímico. |
+
+Los datos de juego de cada material están en `03_data_design.md` §4.
 
 ## Cómo comunicar el valor
 
@@ -53,12 +69,15 @@ empieza trabajando con basura y materiales sin valor, pero utiliza su
 artefacto para transformar progresivamente esos materiales hasta
 alcanzar sustancias extraordinariamente valiosas.
 
-El objetivo conceptual final podría estar relacionado con la creación de
-un material legendario, posiblemente **la Piedra Filosofal**.
+El objetivo final es la **Piedra Filosofal**: la partida se gana al fusionar
+dos de ellas.
 
 ## Dirección visual pendiente
 
-Todavía no se ha definido el estilo artístico definitivo.
+Todavía no se ha definido el estilo artístico definitivo. La imagen de
+referencia (materiales facetados de aspecto *low-poly* pintado, taller de
+madera cálido) es la dirección provisional. La primera versión usa
+placeholders: círculos de color con brillo creciente.
 
 Lo que sí queda establecido es que la representación visual debe
 priorizar la **lectura de la progresión de valor**: el jugador debe

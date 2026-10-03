@@ -2,87 +2,62 @@
 
 ## 1. Concepto
 
-El juego es un puzzle de física inspirado en **Suika Game**.
+**El Alquimista Pobre** es un puzzle de física inspirado en **Suika Game**.
 
-El jugador debe dejar caer objetos dentro de un recipiente y combinarlos
-para crear objetos progresivamente más grandes. Dos objetos del mismo
-tipo, al entrar en contacto, se fusionan y generan el siguiente objeto
-de la cadena.
+El jugador deja caer materiales dentro de un recipiente alquímico. Cuando dos
+materiales iguales se tocan, se transmutan en el siguiente material de la
+cadena, más grande y más valioso.
 
-El objetivo general es conseguir la combinación final, una **sandía**,
-mientras se intenta mantener el recipiente ordenado y evitar que los
-objetos alcancen la zona de peligro.
+La meta es fusionar **dos Piedras Filosofales**, sin que el recipiente se
+llene por encima de la línea de peligro.
+
+La fantasía y la dirección visual están en `el_alquimista_pobre_concepto.md`.
 
 ## 2. Bucle principal
 
-La partida sigue un ciclo sencillo:
+1. El juego muestra el material actual y el próximo.
+2. El jugador elige la posición horizontal y lo suelta.
+3. El material cae y se comporta según la física.
+4. Los materiales se desplazan, ruedan y se acomodan.
+5. Dos materiales iguales en contacto se fusionan en el siguiente nivel.
+6. Las fusiones pueden encadenarse en cascada y suman puntos.
+7. Tras un breve cooldown, el jugador suelta el siguiente material.
 
-1.  El juego muestra el próximo objeto que puede colocar el jugador.
-2.  El jugador decide dónde dejarlo caer.
-3.  El objeto cae y se comporta mediante física.
-4.  Los objetos pueden desplazarse, rebotar y acomodarse dentro del
-    recipiente.
-5.  Cuando dos objetos compatibles entran en contacto, se fusionan.
-6.  La fusión crea un objeto de nivel superior.
-7.  El jugador continúa colocando objetos.
-8.  La partida termina cuando los objetos alcanzan la condición de
-    derrota.
+El juego es continuo: la física y las fusiones no esperan al jugador.
 
-El desafío surge de tomar decisiones sobre dónde colocar cada objeto y
-de prever cómo afectará la física a los objetos que ya están dentro del
-recipiente.
+## 3. Cadena de materiales
 
-## 3. Sistema de combinación
+```text
+1 Basura → 2 Metal común → 3 Cobre → 4 Plata → 5 Oro
+  → 6 Oro encantado → 7 Material celestial → 8 Piedra Filosofal
+```
 
-Cada objeto pertenece a un nivel dentro de una cadena de progresión.
-
-Dos objetos del mismo nivel pueden combinarse para producir un objeto
-del nivel siguiente:
-
-**Objeto + Objeto → Objeto siguiente**
-
-La cadena concreta de objetos todavía queda por definir.
-
-La combinación final de la cadena será la **sandía**.
+Valores, tamaños y rarezas: `03_data_design.md` §4.
 
 ## 4. Papel de la física
 
-La física es una parte fundamental del juego y no solamente una
-representación visual.
+La física es parte del desafío, no solo una representación. Los materiales
+caen, chocan, rebotan, ruedan y se desplazan después de una fusión. El
+jugador tiene que prever tanto dónde cae su material como cómo afectará a los
+que ya están en el recipiente.
 
-Los objetos deben poder:
+## 5. Fin de partida
 
--   caer por gravedad;
--   chocar entre sí;
--   rebotar;
--   rodar;
--   desplazarse después de una combinación;
--   acomodarse dentro del recipiente.
+- **Derrota:** un material asentado permanece por encima de la línea de
+  peligro durante 1 segundo.
+- **Victoria:** dos Piedras Filosofales se fusionan.
 
-Por lo tanto, las decisiones del jugador deben considerar tanto la
-posición inicial del objeto como el comportamiento posterior de los
-objetos afectados por la física.
+Reglas exactas: `04_gameplay_design.md` §9.1 y §12.
 
-## 5. Condición de derrota
+## 6. Alcance de la primera versión
 
-El recipiente tendrá una zona o límite que determinará cuándo los
-objetos han ocupado demasiado espacio.
+- Recipiente con paredes y línea de peligro.
+- Materiales con física.
+- Apuntado, soltado y cooldown.
+- Fusión, cascadas y puntuación.
+- Generación intercambiable del próximo material (tres estrategias).
+- Derrota, victoria con animación y reinicio.
+- Visuales placeholder legibles (círculos de color con brillo según rareza) y
+  leyenda de rareza.
 
-La condición exacta de derrota todavía queda por definir.
-
-## 6. Alcance inicial
-
-El objetivo inicial es construir una versión pequeña y funcional que
-contenga únicamente los elementos fundamentales:
-
--   recipiente;
--   objetos con física;
--   colocación y caída;
--   combinación entre objetos iguales;
--   progresión hacia objetos mayores;
--   puntuación;
--   condición de derrota;
--   reinicio de partida.
-
-Los detalles visuales, efectos, audio, balance y otras características
-secundarias se definirán posteriormente.
+Quedan para después: arte definitivo, audio, logros, récords y balance fino.

@@ -63,5 +63,6 @@ godot --path . --debug-collisions --scene res://game/main.tscn
 - [`docs/02_technical_design.md`](docs/02_technical_design.md) — Arquitectura técnica y pruebas de desacoplamiento.
 - [`docs/03_data_design.md`](docs/03_data_design.md) — Especificación de datos y balance configurable.
 - [`docs/04_gameplay_design.md`](docs/04_gameplay_design.md) — Reglas detalladas de colocación y fusión.
+- [`docs/05_plan_implementacion.md`](docs/05_plan_implementacion.md) — Plan de implementación paso a paso (guía temporal).
 - [`docs/el_alquimista_pobre_concepto.md`](docs/el_alquimista_pobre_concepto.md) — Progresión de valor y ambientación.
 - [`docs/RULES.md`](docs/RULES.md) — Guía de estilo y reglas de codificación.

@@ -11,6 +11,7 @@ Documentos canónicos de diseño en `docs/`:
 - `docs/02_technical_design.md` — Arquitectura técnica y desacoplamiento
 - `docs/03_data_design.md` — Recursos, datos y parámetros configurables
 - `docs/04_gameplay_design.md` — Mecánicas de juego y resolución de fusiones
+- `docs/05_plan_implementacion.md` — Plan de implementación paso a paso (guía temporal, no diseño canónico)
 - `docs/el_alquimista_pobre_concepto.md` — Fantasía y progresión visual
 - `docs/RULES.md` — Convenciones de código y estilo obligatorio
 
@@ -46,54 +47,51 @@ godot --path . --scene res://game/main.tscn \
 El diseño sigue estrictamente la separación de responsabilidades definida en `docs/02_technical_design.md`:
 
 ```text
-DATOS
-  ↓
-SIMULACIÓN
-  ↓
-PRESENTACIÓN
+PRESENTACIÓN ──▶ SIMULACIÓN ──▶ DATOS      (A ──▶ B = "A depende de B")
 ```
 
-- **Datos (`PieceData`, `GameConfig`):** Son `Resource` inmutables durante la simulación. No conocen la simulación ni la escena.
-- **Simulación (`Board`, `Piece`, `DropSystem`, `MergeSystem`, `DangerSystem`):** Gobiernan la física y las reglas de juego. Desconocen completamente la presentación y la UI.
-- **Presentación (`GameUI`):** Observa eventos y señales de la simulación. Traduce las entradas del jugador en intenciones o comandos hacia los sistemas. No contiene lógica de reglas ni de puntuación.
+- **Datos (`PieceData`, `PieceCatalog`, `SpawnStrategy`, `GameConfig`):** Son `Resource` inmutables durante la simulación. No conocen la simulación ni la escena.
+- **Simulación (`GameState`, `Board`, `Piece`, `PieceSpawner`, `DropSystem`, `MergeSystem`, `DangerSystem`, `ProgressSystem`):** Gobiernan la física y las reglas de juego. Desconocen completamente la presentación y la UI.
+- **Presentación (`GameUI`, `DropController`, `DropPreview`, `EffectsLayer`):** Observa eventos y señales de la simulación. Traduce las entradas del jugador en intenciones o comandos hacia los sistemas. No contiene lógica de reglas ni de puntuación.
 - **Composition Root (`game/main.tscn` / `game/main.gd`):** La raíz `Main` es el único ensamblador de la partida. Conecta señales e inyecta dependencias. Nunca usar rutas absolutas como `get_node("/root/...")`.
 - **Autoloads mínimos:** No usar autoloads como contenedores globales de conveniencia. El estado de la partida vive en su árbol de composición.
-- **Límite duro de 400 líneas por archivo:** No crear archivos que superen 400 líneas; modularizar mediante componentes o sistemas específicos.
+- **Límite duro de 400 líneas por archivo:** Aplica al código y a la documentación permanente. No crear archivos que lo superen; modularizar mediante componentes o sistemas específicos. Los planes de implementación temporales están exentos.
 
 ---
 
 ## Estructura de Directorios
 
-Organización guiada por dominio (siguiendo §33 de `docs/02_technical_design.md`):
+Organización guiada por dominio (siguiendo §11 de `docs/02_technical_design.md`):
 
 ```text
 res://
-├── game/                            # Composition root y estado de sesión
+├── game/                            # Composition root, estado de sesión y configuración
 │   ├── main.tscn / main.gd
 │   ├── game_state.gd
+│   ├── game_config.gd / game_config_validator.gd
 │   └── game_config.tres
 ├── board/                           # Recipiente físico y zona de peligro
 │   ├── board.tscn / board.gd
 │   └── danger_zone.tscn / danger_zone.gd
-├── piece/                           # Pieza física y recurso descriptor
-│   ├── piece.tscn / piece.gd
-│   └── piece_data.gd
+├── piece/                           # Pieza física, visual y recursos descriptores
+│   ├── piece.tscn / piece.gd / piece_visual.gd
+│   ├── piece_data.gd / piece_catalog.gd / piece_catalog_validator.gd
+│   ├── data/                        # 8 materiales (.tres) + piece_catalog.tres
+│   └── spawn/                       # Estrategias de generación + presets (.tres)
 ├── systems/                         # Sistemas de simulación independientes
-│   ├── drop_system.gd
-│   ├── merge_system.gd
-│   └── danger_system.gd
-├── ui/                              # Capa de presentación y HUD
-│   ├── game_ui.tscn
-│   └── game_ui.gd
+│   ├── piece_generator.gd / piece_spawner.gd
+│   ├── drop_system.gd / merge_system.gd
+│   └── danger_system.gd / progress_system.gd
+├── ui/                              # Presentación, input y efectos
+│   ├── drop_controller.gd / drop_preview.gd / effects_layer.gd / piece_icon.gd
+│   └── game_ui.tscn / game_ui.gd
 ├── assets/                          # Sprites, shaders, audio, fuentes
 ├── tests/                           # Tests automatizados con GUT
-│   ├── unit/                        # Tests unitarios
-│   └── integration/                 # Tests de integración
+│   ├── unit/
+│   ├── integration/
+│   └── helpers/                     # Datos de test y stubs (sin class_name)
 ├── addons/                          # Dependencias de terceros (addons/gut/)
 ├── docs/                            # Documentación y GDDs (.gdignore)
-│   ├── .gdignore
-│   ├── RULES.md
-│   └── *.md
 └── project.godot
 ```
 

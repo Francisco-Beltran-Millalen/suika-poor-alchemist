@@ -2,1212 +2,394 @@
 
 ## 1. Objetivo
 
-Este documento define la arquitectura técnica inicial de **Suika** en Godot.
+Arquitectura técnica de **El Alquimista Pobre** en Godot 4.7. Las reglas de
+juego están en `04_gameplay_design.md` y los datos en `03_data_design.md`.
+Las firmas exactas de cada componente están en el plan `05_plan_implementacion.md`.
 
-El objetivo no es solamente dividir el código en scripts, sino establecer una arquitectura que mantenga separadas tres responsabilidades fundamentales:
+La arquitectura separa tres responsabilidades:
 
 ```text
-DATOS
-  ↓
-SIMULACIÓN
-  ↓
-PRESENTACIÓN
+DATOS         definen qué existe (Resources inmutables)
+SIMULACIÓN    ejecuta la partida (física, reglas, estado)
+PRESENTACIÓN  muestra la partida y traduce input en intenciones
 ```
-
-La dirección de las dependencias es deliberada:
-
-- los datos no conocen la simulación;
-- la simulación puede consumir datos, pero no conoce la presentación;
-- la presentación observa el estado y los eventos de la simulación;
-- ningún sistema de juego necesita conocer nodos de UI;
-- ningún elemento visual debe contener reglas de juego.
-
-Godot recomienda utilizar escenas y scripts aplicando responsabilidad única, encapsulación y bajo acoplamiento. También proporciona `Resource`, `RefCounted`, señales y escenas como mecanismos naturales para evitar convertir el árbol de nodos en un contenedor de toda la lógica. citeturn0search0turn0search4turn0search14
 
 ---
 
-## 2. Principio fundamental: composición, no dependencia global
+## 2. Dirección de dependencias
 
-La escena principal será el **composition root** de la partida.
-
-Su responsabilidad será ensamblar los componentes:
-
-```text
-Main
- ├── crea GameState
- ├── configura Simulation
- ├── configura Presentation
- └── conecta señales
-```
-
-`Main` puede conocer todos los niveles porque su función es precisamente ensamblarlos.
-
-Los componentes internos, en cambio, deben conocer solamente las dependencias que necesitan.
-
-No se utilizarán rutas globales como:
+**Convención única en este documento: `A ──▶ B` significa "A depende de B"**
+(A conoce, referencia o llama a B).
 
 ```text
-get_node("/root/Main/...")
+PRESENTACIÓN ──▶ SIMULACIÓN ──▶ DATOS
+      │                            ▲
+      └────────────────────────────┘
 ```
 
-ni dependencias rígidas como:
+Permitido:
 
-```text
-../../../../Main
-```
+- la simulación lee datos;
+- la presentación lee datos (colores, nombres, radios) y **observa** señales
+  de la simulación;
+- la presentación envía **intenciones** a la simulación (`request_drop()`,
+  `restart_requested`), siempre conectadas por `Main`.
 
-Godot recomienda utilizar el árbol de escenas y señales para limitar el acoplamiento, y advierte que el estado global mediante Autoload puede hacer que los problemas se propaguen por todo el proyecto. citeturn0search6turn0search14
+Prohibido:
+
+- que los datos conozcan la simulación o la presentación (DATOS ──▶ cualquiera);
+- que la simulación conozca la presentación (`Control`, `Label`, vistas,
+  animaciones de UI);
+- que la presentación modifique el estado o las piezas (`state.score += …`,
+  `piece.queue_free()`).
+
+`Main` queda fuera de las capas: es el *composition root* y puede conocerlas
+todas.
 
 ---
 
-# 3. Capas
+## 3. Composition root: `Main`
 
-## 3.1. Capa de datos
-
-Contiene información que describe el juego, pero no ejecuta la partida.
-
-Ejemplos:
+`game/main.gd` es el único ensamblador. Sus responsabilidades:
 
 ```text
-PieceData
-GameConfig
+cargar y validar la configuración
+crear los objetos sin nodo (GameState, PieceGenerator)
+inyectar dependencias con setup(...)
+conectar señales
+iniciar / reiniciar la partida
+congelar o descongelar el tablero al cambiar el estado
 ```
 
-Puede utilizar `Resource` porque los recursos son serializables, reutilizables y editables desde el Inspector. citeturn0search4
+No contiene reglas de fusión, puntuación, peligro ni UI. Si crece, una
+responsabilidad debe irse a su sistema.
 
-Esta capa no debe:
+Reglas:
 
-- acceder al árbol de escenas;
-- emitir órdenes a la simulación;
-- acceder a la UI;
-- contener referencias a nodos de una partida concreta.
+- Nada de `get_node("/root/...")` ni rutas `../../`.
+- **Ningún autoload.**
+- Los componentes reciben sus dependencias con `setup(...)` antes de usarse y
+  nunca buscan a `Main`.
 
 ---
 
-## 3.2. Capa de simulación
+## 4. Componentes
 
-Contiene el estado y comportamiento de una partida.
+| Componente               | Capa         | Tipo base       | Archivo                              |
+| ------------------------ | ------------ | --------------- | ------------------------------------ |
+| `PieceData`              | Datos        | `Resource`      | `piece/piece_data.gd`                |
+| `PieceCatalog`           | Datos        | `Resource`      | `piece/piece_catalog.gd`             |
+| `PieceCatalogValidator`  | Datos        | `RefCounted` (estático) | `piece/piece_catalog_validator.gd` |
+| `GameConfigValidator`    | Datos        | `RefCounted` (estático) | `game/game_config_validator.gd` |
+| `SpawnStrategy` (+2)     | Datos        | `Resource`      | `piece/spawn/*.gd`                   |
+| `GameConfig`             | Datos        | `Resource`      | `game/game_config.gd`                |
+| `GameState`              | Simulación   | `RefCounted`    | `game/game_state.gd`                 |
+| `PieceGenerator`         | Simulación   | `RefCounted`    | `systems/piece_generator.gd`         |
+| `Piece`                  | Simulación   | `RigidBody2D`   | `piece/piece.gd` + `.tscn`           |
+| `Board`                  | Simulación   | `Node2D`        | `board/board.gd` + `.tscn`           |
+| `DangerZone`             | Simulación   | `Area2D`        | `board/danger_zone.gd` + `.tscn`     |
+| `PieceSpawner`           | Simulación   | `Node`          | `systems/piece_spawner.gd`           |
+| `DropSystem`             | Simulación   | `Node`          | `systems/drop_system.gd`             |
+| `MergeSystem`            | Simulación   | `Node`          | `systems/merge_system.gd`            |
+| `DangerSystem`           | Simulación   | `Node`          | `systems/danger_system.gd`           |
+| `ProgressSystem`         | Simulación   | `Node`          | `systems/progress_system.gd`         |
+| `PieceVisual`            | Presentación | `Node2D`        | `piece/piece_visual.gd`              |
+| `DropController`         | Presentación | `Node`          | `ui/drop_controller.gd`              |
+| `DropPreview`            | Presentación | `Node2D`        | `ui/drop_preview.gd`                 |
+| `EffectsLayer`           | Presentación | `Node2D`        | `ui/effects_layer.gd`                |
+| `PieceIcon`              | Presentación | `Control`       | `ui/piece_icon.gd`                   |
+| `GameUI`                 | Presentación | `CanvasLayer`   | `ui/game_ui.gd` + `.tscn`            |
 
-Ejemplos:
+Responsabilidad única de cada uno:
 
-```text
-GameState
-Piece
-DropSystem
-MergeSystem
-DangerSystem
-```
+- **GameState**: almacena y notifica el estado lógico (puntuación, cola
+  ACTUAL/PRÓXIMO, estado de partida). No conoce nodos ni física, y no decide
+  reglas: solo valida transiciones de estado.
+- **PieceGenerator**: decide el próximo tipo de pieza. Combina la
+  `SpawnStrategy` con un `RandomNumberGenerator` propio, que puede tener
+  semilla.
+- **Piece**: cuerpo físico de una instancia. Guarda su `PieceData` y su estado
+  (`DROPPING`/`ACTIVE`/`CONSUMED`) y emite `contact_detected`. No fusiona, no
+  puntúa y no conoce ningún sistema.
+- **Board**: construye las paredes y la zona de peligro a partir de
+  `GameConfig`. Contiene el nodo `Pieces`, ofrece
+  `clamp_piece_position()` y permite congelar o vaciar el tablero.
+- **DangerZone**: solo detecta qué piezas solapan la zona sobre la línea.
+- **PieceSpawner**: único lugar que instancia y elimina piezas. Emite
+  `piece_spawned` para que se conecten las piezas creadas en ejecución.
+- **DropSystem**: convierte intenciones de apuntar y soltar en piezas.
+  Aplica el límite por radio y el cooldown, y avanza la cola.
+- **MergeSystem**: valida contactos, marca piezas consumidas y resuelve
+  fusiones. Emite `pieces_merged` / `max_level_merged`. No puntúa ni decide el
+  fin de la partida.
+- **DangerSystem**: aplica la regla de derrota (pieza `ACTIVE` sobre la línea
+  durante `game_over_delay`).
+- **ProgressSystem**: traduce fusiones en progreso: suma puntos y declara la
+  victoria.
+- **PieceVisual**: dibuja un material (círculo de color o textura, más el
+  brillo) a partir de un `PieceData`. Lo reutilizan `Piece`, `DropPreview` y
+  la UI.
+- **DropController**: lee el input y emite intenciones. No conoce reglas.
+- **DropPreview**: dibuja el material ACTUAL en la posición de apuntado y la
+  línea guía.
+- **EffectsLayer**: efectos de fusión, advertencia de peligro y animación de
+  victoria.
+- **GameUI**: puntuación, PRÓXIMO, leyenda de rareza y pantallas de Game Over
+  y Victoria, con el botón de reinicio.
 
-Esta capa:
-
-- consume datos;
-- crea y modifica entidades físicas;
-- aplica reglas;
-- mantiene el estado de la partida;
-- emite eventos.
-
-No conoce:
-
-- `Control`;
-- `Label`;
-- `TextureRect`;
-- animaciones de UI;
-- escenas de presentación.
-
----
-
-## 3.3. Capa de presentación
-
-Representa visualmente el estado de la simulación.
-
-Ejemplos:
-
-```text
-GameUI
-ScoreView
-NextPieceView
-GameOverView
-```
-
-Esta capa:
-
-- observa eventos;
-- muestra datos;
-- envía acciones de entrada cuando corresponde.
-
-No debe:
-
-- calcular puntuación;
-- decidir si una combinación es válida;
-- decidir cuándo termina la partida;
-- modificar directamente las piezas físicas.
-
----
-
-# 4. Dirección de dependencias
-
-La arquitectura debe respetar:
-
-```text
-             ┌─────────────┐
-             │    DATOS    │
-             └──────┬──────┘
-                    ↓
-             ┌─────────────┐
-             │ SIMULACIÓN  │
-             └──────┬──────┘
-                    ↓
-             ┌─────────────┐
-             │PRESENTACIÓN │
-             └─────────────┘
-```
-
-Nunca:
-
-```text
-Datos → Simulación
-Datos → UI
-Simulación → UI
-```
-
-La interpretación correcta de la flecha es "puede depender de".
-
-Por lo tanto:
-
-```text
-PieceData
-   ↑
- Piece
-   ↑
-MergeSystem
-   ↑
-GameState
-   ↑
-GameUI
-```
-
-La UI observa el resultado de la simulación, no controla cómo se produce.
+Nota sobre `PieceVisual` dentro de `piece.tscn`: una entidad física tiene que
+verse. El visual es un nodo hijo sin reglas, que lee `PieceData` y nunca
+modifica la simulación.
 
 ---
 
-# 5. Estructura de escenas
-
-La estructura inicial será:
+## 5. Árbol de escena
 
 ```text
 main.tscn
-└── Main
-    ├── Simulation
-    │   ├── Board
-    │   │   ├── Container
-    │   │   └── DangerZone
-    │   └── Pieces
-    │
-    ├── Systems
-    │   ├── DropSystem
-    │   ├── MergeSystem
-    │   └── DangerSystem
-    │
-    └── Presentation
-        └── GameUI
+└── Main (Node)                         game/main.gd
+    ├── World (Node2D)                  posición = origen del interior del recipiente
+    │   ├── Board (board.tscn)          en (0, 0) → coordenadas de tablero = locales de World
+    │   │   ├── Walls (StaticBody2D)    3 CollisionShape2D creados en setup()
+    │   │   ├── DangerZone (danger_zone.tscn)
+    │   │   └── Pieces (Node2D)         contenedor de las Piece
+    │   ├── DropPreview (Node2D)
+    │   └── EffectsLayer (Node2D)
+    ├── Systems (Node)
+    │   ├── PieceSpawner (Node)
+    │   ├── DropSystem (Node)
+    │   ├── MergeSystem (Node)
+    │   ├── DangerSystem (Node)
+    │   └── ProgressSystem (Node)
+    ├── DropController (Node)
+    └── GameUI (game_ui.tscn, CanvasLayer)
 ```
 
-Sin embargo, `Simulation` y `Systems` no deben convertirse en "carpetas de scripts" con responsabilidades ambiguas.
+**Todas las posiciones de la simulación están en coordenadas de tablero**:
+origen en la esquina superior izquierda del interior y eje Y hacia abajo.
+Como `Board`, `DropPreview` y `EffectsLayer` son hijos de `World` en (0, 0),
+comparten ese sistema sin conversiones. Solo el ratón requiere convertir desde
+coordenadas globales (lo hace `DropSystem` con `board.to_local()`).
 
-Su función es organizar el árbol.
-
-Las responsabilidades reales pertenecen a los componentes concretos.
-
-Godot utiliza escenas como unidades reutilizables y composables, por lo que una escena debe representar una entidad o composición coherente, no solamente servir como contenedor arbitrario. citeturn0search0turn0search8
+`Main` coloca `World` en `((viewport_w − container_width) / 2, 80)`.
 
 ---
 
-# 6. Datos: PieceData
+## 6. Capas de física
 
-Cada tipo de pieza será descrito mediante un `Resource`.
+| Capa | Nombre   | Quién está en ella | Máscara                          |
+| ---- | -------- | ------------------ | -------------------------------- |
+| 1    | `walls`  | `Walls`            | —                                |
+| 2    | `pieces` | `Piece`            | `walls` + `pieces`               |
+| —    | —        | `DangerZone`       | `pieces` (monitoring, no monitorable) |
 
-```text
-PieceData
-├── id
-├── level
-├── visual
-├── collision_shape
-├── next_piece
-└── score_value
-```
-
-`PieceData` describe qué es una pieza.
-
-No describe una pieza concreta que ya está dentro del recipiente.
-
-Por ejemplo:
-
-```text
-AppleData
-AppleData
-AppleData
-```
-
-pueden ser referencias al mismo recurso.
-
-Mientras:
-
-```text
-Piece #1
-Piece #2
-Piece #3
-```
-
-son tres instancias físicas independientes.
-
-Esto permite reutilizar datos sin duplicarlos.
+Se declaran con nombre en `project.godot` (`layer_names/2d_physics/layer_1`…).
 
 ---
 
-# 7. Datos: GameConfig
-
-Los parámetros globales configurables que no pertenecen a una pieza concreta pueden estar en otro `Resource`.
-
-Conceptualmente:
+## 7. Comunicación (señales)
 
 ```text
-GameConfig
-├── container_size
-├── danger_height
-├── initial_state
-└── otros parámetros de configuración
+DropController.aim_requested(global_x)        ─▶ DropSystem.request_aim_global
+DropController.aim_step_requested(dir, delta) ─▶ DropSystem.request_aim_step
+DropController.drop_requested()               ─▶ DropSystem.request_drop
+DropController.restart_requested()            ─▶ Main._on_restart_requested
+GameUI.restart_requested()                    ─▶ Main._on_restart_requested
+
+PieceSpawner.piece_spawned(piece)             ─▶ MergeSystem.register_piece
+Piece.contact_detected(piece, other)          ─▶ MergeSystem.handle_contact   (conectada en register_piece)
+
+MergeSystem.pieces_merged(source, result, pos)─▶ ProgressSystem, EffectsLayer
+MergeSystem.max_level_merged(source, pos)     ─▶ ProgressSystem, EffectsLayer
+DangerSystem.danger_changed(ratio)            ─▶ EffectsLayer
+DropSystem.aim_changed(x)                     ─▶ DropPreview
+DropSystem.drop_ready_changed(ready)          ─▶ DropPreview
+
+GameState.score_changed(score)                ─▶ GameUI
+GameState.current_piece_changed(data)         ─▶ DropPreview, DropSystem (re-limitar el apuntado)
+GameState.next_piece_changed(data)            ─▶ GameUI
+GameState.status_changed(status)              ─▶ GameUI, Main (congelar)
 ```
 
-No se debe utilizar `GameConfig` para almacenar estado mutable de una partida.
+Quién conecta qué:
 
-La diferencia es:
+- **Observación:** cada componente se suscribe él mismo, en su `setup()`, a
+  las señales que observa. Recibe al emisor como dependencia inyectada.
+- **Intenciones:** `Main` conecta las señales de la presentación con los
+  métodos de los sistemas (`DropController` → `DropSystem`, `restart_requested`
+  → `Main`).
 
-```text
-GameConfig = configuración
-GameState  = estado actual
-```
+`MergeSystem` conecta la señal de cada pieza dentro de `register_piece()`.
+Así se resuelve el problema de las piezas creadas en ejecución: `Main` conecta
+una sola vez `piece_spawned`, y el sistema se suscribe a cada pieza nueva.
+`Piece` nunca conoce a `MergeSystem`.
 
 ---
 
-# 8. Estado de ejecución
+## 8. Flujos
 
-`GameState` representa una partida concreta.
-
-No será un `Node`.
-
-Será un objeto ligero, por ejemplo derivado de `RefCounted`.
+### 8.1. Soltar
 
 ```text
-GameState
-├── score
-├── current_piece_data
-├── next_piece_data
-└── status
+DropController.drop_requested
+  → DropSystem.request_drop()
+      ¿PLAYING y cooldown == 0?  no → ignorar
+      x = clamp(aim_x, r, width − r)       r = current.radius
+      PieceSpawner.spawn(current, (x, spawn_y), DROPPING)
+      GameState.advance_queue(PieceGenerator.next())
+      cooldown = drop_cooldown → drop_ready_changed(false)
 ```
 
-Estados:
+### 8.2. Fusión
 
 ```text
-READY
-PLAYING
-GAME_OVER
+[paso de física N, durante el flush de contactos]
+Piece.body_entered(other)
+  → si state == DROPPING: state = ACTIVE
+  → si other es Piece: contact_detected(self, other)
+MergeSystem.handle_contact(a, b)
+  ¿PLAYING? ¿a != b? ¿a.data == b.data? ¿ninguna CONSUMED?   no → ignorar
+  a.consume(); b.consume()            ← exclusión inmediata
+  pending.append([a, b])
+
+[inicio del paso N+1, MergeSystem._physics_process → tick()]
+para cada par en pending (en orden):
+  ¿sigue PLAYING?  no → vaciar pending y salir
+  pos = (a.position + b.position) / 2
+  PieceSpawner.despawn(a); PieceSpawner.despawn(b)     ← primero eliminar
+  si source.is_max_level():
+      max_level_merged(source, pos)   → ProgressSystem: +victory_bonus, set_victory()
+  si no:
+      p = Board.clamp_piece_position(pos, next.radius)
+      PieceSpawner.spawn(next, p, ACTIVE)
+      pieces_merged(source, next, p)  → ProgressSystem: +next.score_value
 ```
 
-`GameState` puede emitir:
+La resolución se difiere porque Godot no permite añadir ni eliminar cuerpos
+durante el flush de consultas físicas (*"Can't change this state while
+flushing queries"*). Se usa una cola propia en lugar de `call_deferred()` para
+que el orden sea explícito y la cola se pueda vaciar al reiniciar.
+
+Cascadas: la pieza nueva se registra mediante `piece_spawned`, como cualquier
+otra, y sus contactos vuelven a entrar en este flujo.
+
+### 8.3. Peligro y Game Over
 
 ```text
-score_changed
-current_piece_changed
-next_piece_changed
-status_changed
+DangerSystem._physics_process → tick(delta)
+  ¿PLAYING?  no → salir
+  dentro = DangerZone.get_pieces_inside() filtradas a state == ACTIVE
+  timers[id] += delta para las de dentro; borrar las que salieron
+  danger_changed(max(timers) / game_over_delay)
+  si max(timers) ≥ game_over_delay → GameState.set_game_over()
 ```
 
-No conoce nodos.
+`DangerZone` es un rectángulo que va de `y = −400` a `y = danger_line_y` y
+cubre todo el ancho. Cualquier pieza con alguna parte por encima de la línea
+lo solapa.
 
-No instancia escenas.
+### 8.4. Fin de partida
 
-No accede a física.
+```text
+GameState.status_changed(GAME_OVER | VICTORY)
+  → Main: Board.set_frozen(true)
+  → GameUI: muestra la pantalla correspondiente
+DropSystem, MergeSystem y DangerSystem consultan is_playing() y no actúan.
+```
 
-Su responsabilidad es almacenar y comunicar el estado lógico de la partida.
+### 8.5. Reinicio
 
-Godot recomienda utilizar objetos ligeros cuando una responsabilidad no necesita formar parte del árbol de nodos. `Resource` y `RefCounted` son precisamente alternativas a usar `Node` para todo. citeturn0search4
+```text
+restart_requested (GameUI o DropController, solo si GAME_OVER/VICTORY)
+  → Main._start_new_game():
+      MergeSystem.reset()      cancela las fusiones pendientes
+      DangerSystem.reset()     borra los contadores
+      Board.clear_pieces()     elimina las piezas (remove_child + queue_free)
+      PieceGenerator.reset()   vuelve a sembrar el RNG si hay semilla fija
+      GameState.reset()        score 0, cola vacía, READY
+      DropSystem.reset()       rellena ACTUAL/PRÓXIMO, cooldown 0, apuntado al centro
+      Board.set_frozen(false)
+      GameState.start()        PLAYING
+```
+
+El primer arranque usa la misma función.
 
 ---
 
-# 9. Entidad física: Piece
+## 9. Detalles del motor que la implementación debe respetar
 
-La pieza física será una escena reutilizable.
-
-```text
-piece.tscn
-└── Piece (RigidBody2D)
-    ├── CollisionShape2D
-    └── Visual
-```
-
-`Piece` representa una instancia física de `PieceData`.
-
-Conceptualmente:
-
-```text
-Piece
- ├── data: PieceData
- └── estado físico
-```
-
-Responsabilidades:
-
-- existir dentro de la simulación física;
-- mantener su `PieceData`;
-- responder a la física;
-- detectar contactos relevantes;
-- informar eventos.
-
-No debe:
-
-- modificar `GameState`;
-- acceder a UI;
-- ejecutar la combinación;
-- calcular puntuación;
-- decidir Game Over.
-
-`RigidBody2D` permite que el motor controle el movimiento y la respuesta física de la pieza. citeturn0search12
+1. **`contact_monitor = true` y `max_contacts_reported > 0`** en `Piece`; sin
+   eso, `body_entered` nunca se emite.
+2. **Forma única por instancia:** `Piece` crea un `CircleShape2D.new()` propio
+   en `_ready()`. Si se modificara el `radius` del sub-recurso de
+   `piece.tscn`, cambiaría en todas las instancias, porque se comparte.
+3. **Nada de añadir o eliminar cuerpos durante el flush de contactos:** se
+   difiere al `tick()` del paso siguiente (§8.2).
+4. **Congelar:** `Board.set_frozen(true)` pone `Pieces.process_mode =
+   PROCESS_MODE_DISABLED`. `piece.tscn` usa `disable_mode =
+   DISABLE_MODE_MAKE_STATIC`, de modo que las piezas quedan quietas y visibles.
+5. **Paredes gruesas (`wall_thickness`) y CCD (`CCD_MODE_CAST_SHAPE`)** para
+   evitar el *tunneling* de las piezas pequeñas. Las paredes laterales suben
+   hasta `y = −400` para contener las pilas que sobresalen.
+6. **Eliminar inmediatamente:** al quitar una pieza se hace `remove_child()`
+   y luego `queue_free()`, para que los recuentos (`Pieces.get_child_count()`)
+   sean correctos en el mismo frame.
+7. **`setup()` antes de `add_child()`:** `PieceSpawner` llama a
+   `piece.setup(data, state)` y después la añade. `Piece._ready()` aplica la
+   forma, la masa y el visual.
+8. **Tiempo con `tick(delta)`:** los sistemas con lógica temporal exponen un
+   `tick(delta)` público, llamado desde `_physics_process`. Los tests unitarios
+   lo llaman directamente, sin esperar frames reales.
 
 ---
 
-# 10. Comunicación de Piece
+## 10. Recursos compartidos
 
-`Piece` no conocerá a `MergeSystem`.
+Un `Resource` se comparte entre todas las instancias que lo cargan. Por eso
+`PieceData`, `PieceCatalog`, `SpawnStrategy` y `GameConfig` son **de solo
+lectura en ejecución**. El estado mutable vive en `Piece` (físico) y en
+`GameState` (lógico).
 
-En lugar de:
-
-```text
-Piece → MergeSystem
-```
-
-se utilizará:
-
-```text
-Piece
-  │
-  └── signal: contact_detected(other)
-                     ↓
-              sistema conectado
-```
-
-Las señales permiten que un objeto reaccione a otro sin establecer una referencia directa entre ambos. Esto reduce el acoplamiento. citeturn0search14
-
-La conexión será realizada por la composición de la partida.
+Las estrategias de generación son la única excepción a "los Resources no
+contienen lógica": son funciones puras y sin estado (`03_data_design.md` §7).
 
 ---
 
-# 11. Sistema de combinación
+## 11. Estructura de archivos
 
-`MergeSystem` pertenece a la simulación.
-
-Responsabilidad única:
-
-> Resolver combinaciones entre piezas.
-
-No debe controlar:
-
-- UI;
-- input;
-- puntuación visual;
-- Game Over;
-- generación de niveles.
-
-Recibe eventos de contacto y determina:
-
-```text
-¿Son compatibles?
-        ↓
-¿Siguen activas?
-        ↓
-¿Alguna ya está siendo consumida?
-        ↓
-Sí → resolver una sola vez
-```
+El árbol completo está en `AGENTS.md` ("Estructura de Directorios") y es la
+referencia única. Resumen: `game/` (composición, estado y configuración),
+`board/`, `piece/` (con `data/` y `spawn/`), `systems/`, `ui/`, `assets/` y
+`tests/` (`unit/`, `integration/`, `helpers/`).
 
 ---
 
-# 12. Evitar doble combinación
+## 12. Pruebas de desacoplamiento
 
-Este es un requisito arquitectónico importante.
-
-Una colisión puede ser observada desde ambos cuerpos:
-
-```text
-A → B
-B → A
-```
-
-No se deben ejecutar dos fusiones.
-
-`MergeSystem` debe mantener un conjunto temporal de piezas que están siendo consumidas:
-
-```text
-pending_merges
-consumed_pieces
-```
-
-El algoritmo conceptual es:
-
-```text
-recibir A + B
-
-si A o B ya están consumidas:
-    ignorar
-
-si no son compatibles:
-    ignorar
-
-marcar A y B como consumidas
-programar resolución
-```
-
-De esta manera la autoridad sobre la combinación existe en un único lugar.
+| # | Pregunta                                                                         | Debe ser |
+| - | -------------------------------------------------------------------------------- | -------- |
+| 1 | ¿Se puede reemplazar `GameUI` sin tocar ningún sistema?                          | Sí       |
+| 2 | ¿Se puede añadir un material solo con datos?                                     | Sí       |
+| 3 | ¿Se pueden cambiar los parámetros físicos sin tocar la puntuación?               | Sí       |
+| 4 | ¿Se puede cambiar la regla de fusión sin tocar la UI?                            | Sí       |
+| 5 | ¿Se puede cambiar la regla de derrota sin tocar `Piece` ni `DangerZone`?         | Sí       |
+| 6 | ¿Se puede reiniciar sin recargar la escena?                                      | Sí       |
+| 7 | ¿Funcionan `MergeSystem`, `DangerSystem` y `DropSystem` en tests sin UI?         | Sí       |
+| 8 | ¿Funciona una partida sin autoloads?                                             | Sí       |
+| 9 | ¿Se puede cambiar la estrategia de generación sin tocar código?                  | Sí       |
 
 ---
 
-# 13. Resolución de combinación
-
-La resolución modifica la simulación.
-
-```text
-A + B
- ↓
-determinar PieceData.next_piece
- ↓
-crear nueva Piece
- ↓
-colocarla en posición de combinación
- ↓
-actualizar GameState
- ↓
-liberar A y B
-```
-
-Si la modificación del árbol ocurre durante una etapa en la que no debe realizarse directamente, se puede diferir mediante `call_deferred()`. Godot proporciona este mecanismo para ejecutar una llamada posteriormente, al finalizar el procesamiento actual. 
-
-El objetivo es que el orden de modificación del árbol sea explícito y no dependa accidentalmente del orden de las señales de física.
-
----
-
-# 14. Combinaciones en cascada
-
-Una pieza recién creada vuelve a ser una entidad normal de la simulación.
-
-No existe una función especial como:
-
-```text
-resolve_level_2_combo()
-resolve_level_3_combo()
-```
-
-La nueva pieza simplemente vuelve a participar:
-
-```text
-Nueva Piece
-     ↓
-Physics
-     ↓
-contact_detected
-     ↓
-MergeSystem
-```
-
-Por lo tanto, la misma arquitectura funciona para cualquier cantidad de niveles.
-
----
-
-# 15. DropSystem
-
-`DropSystem` pertenece a la simulación.
-
-Responsabilidad:
-
-> Convertir una orden de colocación en una nueva pieza física.
-
-Entrada:
-
-```text
-drop_requested(position)
-```
-
-Proceso:
-
-```text
-GameState.next_piece
-        ↓
-crear Piece
-        ↓
-asignar PieceData
-        ↓
-colocar posición
-        ↓
-añadir a Pieces
-        ↓
-actualizar GameState
-```
-
-No debe saber cómo se dibuja la UI.
-
-Tampoco debe decidir qué pieza será la siguiente mediante lógica propia si `GameState` es la fuente de verdad.
-
----
-
-# 16. Input
-
-El input debe considerarse una fuente de comandos, no una regla del juego.
-
-Conceptualmente:
-
-```text
-Input
-  ↓
-drop_requested(position)
-  ↓
-DropSystem
-```
-
-La lógica de input puede vivir en un nodo/controlador específico o en la capa de presentación dependiendo de cómo se implemente la interfaz.
-
-La regla arquitectónica es:
-
-```text
-input = intención
-simulation = decisión y ejecución
-```
-
-Por ejemplo, el input puede decir:
-
-```text
-"quiero colocar en X = 320"
-```
-
-pero no:
-
-```text
-"crea una fruta nivel 3 y suma 30 puntos"
-```
-
----
-
-# 17. Board
-
-El tablero pertenece a la simulación física.
-
-```text
-Board
-├── Container
-│   ├── LeftWall
-│   ├── RightWall
-│   └── Floor
-└── DangerZone
-```
-
-Responsabilidades:
-
-- definir los límites;
-- contener físicamente las piezas;
-- proporcionar la zona de detección necesaria.
-
-No controla puntuación ni combinaciones.
-
----
-
-# 18. DangerSystem
-
-La detección física y la regla de derrota deben estar separadas.
-
-```text
-DangerZone
-    ↓
-body_entered
-    ↓
-DangerSystem
-    ↓
-GameState
-```
-
-`DangerZone` solamente detecta.
-
-`DangerSystem` interpreta el evento según la regla de juego.
-
-`GameState` cambia a `GAME_OVER`.
-
-Esto permite modificar posteriormente la regla de derrota sin modificar la escena física.
-
----
-
-# 19. Puntuación
-
-La puntuación se modifica desde la simulación.
-
-```text
-MergeSystem
-    ↓
-GameState.add_score()
-    ↓
-score_changed
-    ↓
-GameUI
-```
-
-Nunca:
-
-```text
-MergeSystem → Label
-```
-
-ni:
-
-```text
-GameUI → GameState.score += 100
-```
-
-La UI solo representa el estado.
-
----
-
-# 20. Presentación
-
-La presentación será una escena independiente:
-
-```text
-game_ui.tscn
-└── GameUI
-    ├── ScoreView
-    ├── NextPieceView
-    └── GameOverView
-```
-
-`GameUI` recibe eventos:
-
-```text
-score_changed
-next_piece_changed
-status_changed
-```
-
-y actualiza sus elementos visuales.
-
-No necesita conocer:
-
-- `MergeSystem`;
-- `DropSystem`;
-- `Piece`;
-- `DangerZone`.
-
-Esto permite reemplazar completamente la interfaz sin modificar las reglas de juego.
-
----
-
-# 21. Flujo de información
-
-El flujo normal será:
-
-```text
-                 ┌──────────────┐
-                 │  PieceData   │
-                 └──────┬───────┘
-                        ↓
-Input → DropSystem → Piece
-                        ↓
-                   Physics
-                        ↓
-                MergeSystem
-                        ↓
-                   GameState
-                        ↓
-                    Signals
-                        ↓
-                    GameUI
-```
-
-La información viaja hacia la presentación.
-
-Las reglas no viajan hacia la presentación.
-
----
-
-# 22. Flujo de una combinación
-
-```text
-Physics
-   ↓
-Piece.contact_detected()
-   ↓
-MergeSystem
-   ↓
-validación
-   ↓
-marcar A/B como consumidas
-   ↓
-crear nueva Piece
-   ↓
-actualizar GameState
-   ↓
-score_changed
-   ↓
-GameUI
-```
-
-La UI no participa en ningún punto de la resolución.
-
----
-
-# 23. Flujo de Game Over
-
-```text
-Physics
-   ↓
-DangerZone.body_entered
-   ↓
-DangerSystem
-   ↓
-GameState.set_game_over()
-   ↓
-status_changed
-   ↓
-GameUI
-```
-
-`DropSystem` también observa el estado y deja de aceptar órdenes mientras el estado sea `GAME_OVER`.
-
----
-
-# 24. Flujo de reinicio
-
-```text
-GameUI
-   ↓
-restart_requested
-   ↓
-Main / GameSession
-   ↓
-reset GameState
-   ↓
-limpiar Pieces
-   ↓
-generar próximo estado
-   ↓
-PLAYING
-   ↓
-GameUI
-```
-
-La interfaz solicita reiniciar.
-
-La interfaz no limpia el árbol.
-
-La interfaz no crea piezas.
-
-La interfaz no modifica directamente `GameState`.
-
----
-
-# 25. Papel de Main
-
-`Main` debe ser deliberadamente pequeño.
-
-Su responsabilidad es:
-
-```text
-crear
-conectar
-inicializar
-reiniciar
-```
-
-No debe contener:
-
-- reglas de combinación;
-- reglas de puntuación;
-- lógica de física;
-- lógica de UI;
-- reglas de Game Over.
-
-Si `main.gd` comienza a crecer significativamente, eso será una señal de que alguna responsabilidad debe trasladarse al sistema correspondiente.
-
----
-
-# 26. Dependencias permitidas
-
-```text
-PieceData
-   ↓
-Piece
-
-PieceData
-   ↓
-DropSystem
-
-GameState
-   ↑
-DropSystem
-MergeSystem
-DangerSystem
-
-GameState
-   ↓
-GameUI
-
-Main
- ├── PieceData
- ├── GameState
- ├── DropSystem
- ├── MergeSystem
- ├── DangerSystem
- └── GameUI
-```
-
-La regla importante es que `Main` puede conocer a todos porque es el compositor.
-
-Los componentes no deben conocer a `Main`.
-
----
-
-# 27. Dependencias prohibidas
-
-No se permitirá:
-
-```text
-Piece → GameUI
-Piece → Main
-Piece → MergeSystem
-Piece → GameState
-```
-
-ni:
-
-```text
-GameUI → Piece
-GameUI → MergeSystem
-GameUI → DangerSystem
-```
-
-ni:
-
-```text
-PieceData → Node
-PieceData → GameState
-```
-
-Esto mantiene las capas separadas.
-
----
-
-# 28. ¿Qué ocurre si cambia la UI?
-
-No debería ser necesario modificar la simulación.
-
-Por ejemplo, cambiar:
-
-```text
-GameUI
-```
-
-por:
-
-```text
-MinimalGameUI
-```
-
-o:
-
-```text
-AnimatedGameUI
-```
-
-solo requiere conectar ambas a los mismos eventos de estado.
-
----
-
-# 29. ¿Qué ocurre si cambia la cadena?
-
-Modificar:
-
-```text
-PieceData.next_piece
-```
-
-no debe requerir modificar:
-
-- `Piece`;
-- `MergeSystem`;
-- `DropSystem`;
-- `GameState`;
-- `GameUI`.
-
-Esta es una prueba fundamental de reutilización.
-
----
-
-# 30. ¿Qué ocurre si cambia la física?
-
-Modificar:
-
-```text
-RigidBody2D
-CollisionShape2D
-PhysicsMaterial
-```
-
-no debería requerir modificar la lógica de puntuación ni la interfaz.
-
-La física produce eventos.
-
-Los sistemas interpretan esos eventos.
-
----
-
-# 31. ¿Qué ocurre si cambia la condición de derrota?
-
-Debe poder modificarse principalmente dentro de `DangerSystem`.
-
-Por ejemplo, si posteriormente se decide que:
-
-```text
-una pieza debe permanecer sobre la línea durante cierto tiempo
-```
-
-no debería ser necesario modificar:
-
-- `Piece`;
-- `MergeSystem`;
-- `GameUI`.
-
-Esta separación es la razón de mantener `DangerZone` y `DangerSystem` separados.
-
----
-
-# 32. Recursos compartidos y estado mutable
-
-Un punto importante de Godot es que un `Resource` puede estar compartido por múltiples instancias.
-
-Por ello:
-
-```text
-PieceData
-```
-
-debe tratarse como definición inmutable durante la partida.
-
-No se debe hacer:
-
-```text
-piece.data.score_value += 10
-```
-
-si `score_value` pertenece al recurso compartido.
-
-El estado mutable debe vivir en:
-
-```text
-Piece
-GameState
-```
-
-según corresponda.
-
-Los recursos describen.
-
-Las instancias viven.
-
-El estado cambia.
-
----
-
-# 33. Estructura de archivos
-
-La organización debe mantener los recursos relacionados cerca de sus escenas cuando resulte razonable, siguiendo las recomendaciones de organización de proyectos de Godot. Los nombres de archivos y carpetas utilizarán `snake_case`, mientras los nodos utilizarán `PascalCase`. citeturn0search3
-
-Una estructura inicial:
-
-```text
-res://
-├── game/
-│   ├── main.tscn
-│   ├── main.gd
-│   ├── game_state.gd
-│   └── game_config.tres
-│
-├── board/
-│   ├── board.tscn
-│   ├── board.gd
-│   └── danger_zone.tscn
-│
-├── piece/
-│   ├── piece.tscn
-│   ├── piece.gd
-│   └── piece_data.gd
-│
-├── systems/
-│   ├── drop_system.gd
-│   ├── merge_system.gd
-│   └── danger_system.gd
-│
-├── ui/
-│   ├── game_ui.tscn
-│   └── game_ui.gd
-│
-└── assets/
-```
-
-La organización física de archivos puede evolucionar, pero la separación conceptual no debe perderse.
-
----
-
-# 34. Prueba de desacoplamiento
-
-Antes de considerar terminada esta arquitectura, debe poder responder afirmativamente a estas pruebas.
-
-### Prueba 1 — UI
-
-¿Podemos reemplazar completamente la UI sin modificar las reglas?
-
-Debe ser sí.
-
-### Prueba 2 — datos
-
-¿Podemos agregar una nueva pieza modificando datos y recursos sin duplicar lógica?
-
-Debe ser sí.
-
-### Prueba 3 — física
-
-¿Podemos modificar parámetros físicos sin tocar la puntuación?
-
-Debe ser sí.
-
-### Prueba 4 — combinación
-
-¿Podemos cambiar la regla de combinación sin modificar la UI?
-
-Debe ser sí.
-
-### Prueba 5 — derrota
-
-¿Podemos cambiar la condición de derrota sin modificar `Piece`?
-
-Debe ser sí.
-
-### Prueba 6 — reinicio
-
-¿Podemos reiniciar una partida sin reconstruir la aplicación completa?
-
-Debe ser sí.
-
-### Prueba 7 — ejecución aislada
-
-¿Puede `MergeSystem` funcionar sin instanciar la UI?
-
-Debe ser sí.
-
-### Prueba 8 — ausencia de globales
-
-¿Puede una partida ejecutarse sin que `Piece` o `GameUI` necesiten un Autoload?
-
-Debe ser sí.
-
----
-
-# 35. Revisión adversaria
-
-La arquitectura debe considerarse defectuosa si aparece cualquiera de estos síntomas.
-
-### `Main` crece demasiado
-
-Indica que se están acumulando responsabilidades.
-
-### `Piece` empieza a conocer sistemas
-
-Indica que la entidad física dejó de estar desacoplada.
-
-### `GameUI` comienza a modificar reglas
-
-Indica que la presentación está invadiendo la simulación.
-
-### `GameState` empieza a instanciar nodos
-
-Indica que el estado lógico está invadiendo la capa de escena.
-
-### `PieceData` empieza a almacenar estado mutable
-
-Indica que se está confundiendo definición con instancia.
-
-### `MergeSystem` empieza a controlar puntuación, Game Over y input
-
-Indica que el sistema de combinación se está convirtiendo en un God object.
-
-### aparecen muchos Autoloads
-
-Indica que se está utilizando estado global para evitar diseñar correctamente las dependencias.
-
----
-
-# 36. Decisión arquitectónica
-
-La arquitectura final para la primera implementación queda definida como:
-
-```text
-┌─────────────────────────────────────────┐
-│              PRESENTACIÓN               │
-│                                         │
-│ GameUI                                   │
-│   ↑                                      │
-│   │ signals                              │
-├───┼─────────────────────────────────────┤
-│   │            SIMULACIÓN               │
-│   │                                     │
-│ GameState  DropSystem  MergeSystem       │
-│     ↑          ↑          ↑              │
-│     └──────────┴──────────┘              │
-│                Piece                     │
-│                  ↑                       │
-│               Physics                    │
-├──────────────────┼──────────────────────┤
-│                  │                       │
-│                DATOS                     │
-│                  │                       │
-│             PieceData                    │
-│             GameConfig                   │
-└─────────────────────────────────────────┘
-```
-
-`Main` queda fuera de estas capas como compositor:
-
-```text
-Main
- ├── construye
- ├── inyecta dependencias
- ├── conecta señales
- └── inicia / reinicia
-```
-
-No contiene reglas de dominio.
-
----
-
-# 37. Elementos todavía no definidos
-
-El diseño general todavía deja abiertos:
-
-- cadena concreta de objetos;
-- valores de puntuación definitivos;
-- criterio exacto de derrota;
-- parámetros físicos;
-- presentación visual;
-- efectos de sonido;
-- balance;
-- detalles finales de interfaz.
-
-Estos elementos no deben inventarse dentro de este documento.
-
-La arquitectura debe permitir incorporarlos posteriormente sin alterar la separación fundamental:
-
-```text
-Datos → Simulación → Presentación
-```
+## 13. Revisión adversaria
+
+La arquitectura es defectuosa si aparece cualquiera de estos síntomas:
+
+- `Main` contiene un `if` sobre reglas de juego.
+- `Piece` referencia un sistema, `GameState` o la UI.
+- `GameUI` escribe en `GameState` o toca piezas.
+- `GameState` instancia nodos o accede a la física.
+- `MergeSystem` suma puntos, declara el fin de la partida o lee input.
+- Hay más de un lugar que instancia `piece.tscn`.
+- Se añaden o eliminan cuerpos dentro de un callback de `body_entered`.
+- Aparece un autoload.
+- Algún archivo supera las 400 líneas.
