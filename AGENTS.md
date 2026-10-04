@@ -35,6 +35,9 @@ godot --path . --scene res://game/main.tscn
 # Ver formas de colisión durante la ejecución
 godot --path . --debug-collisions --scene res://game/main.tscn
 
+# Simulación de balance (bot aleatorio por estrategia, CSV + resumen)
+godot --headless --fixed-fps 60 -s tools/balance_sim.gd -- --games=5
+
 # Captura de fotogramas con Movie Maker (requiere ventana, no usar --headless)
 godot --path . --scene res://game/main.tscn \
       --write-movie /tmp/mov/shot.png --fixed-fps 60 --quit-after 120
@@ -86,6 +89,7 @@ res://
 │   ├── drop_controller.gd / drop_preview.gd / effects_layer.gd / piece_icon.gd
 │   ├── debug_controller.gd
 │   └── game_ui.tscn / game_ui.gd
+├── tools/                           # Scripts de línea de comandos (balance_sim.gd)
 ├── assets/                          # Sprites, shaders, audio, fuentes
 ├── tests/                           # Tests automatizados con GUT
 │   ├── unit/

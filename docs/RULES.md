@@ -92,6 +92,7 @@ res://
 │   ├── drop_controller.gd / drop_preview.gd / effects_layer.gd / piece_icon.gd
 │   ├── debug_controller.gd
 │   └── game_ui.tscn / game_ui.gd
+├── tools/                           # Scripts de línea de comandos (balance_sim.gd)
 ├── assets/                          # Sprites, shaders, audio, fuentes
 ├── tests/                           # Tests automatizados con GUT
 │   ├── unit/

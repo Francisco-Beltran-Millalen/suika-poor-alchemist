@@ -31,6 +31,7 @@ res://
 ├── piece/            # Piezas físicas y PieceData (recursos)
 ├── systems/          # Sistemas de simulación (caída, fusión, peligro)
 ├── ui/               # Presentación e interfaz de usuario
+├── tools/            # Scripts de línea de comandos (simulación de balance)
 ├── assets/           # Sprites, shaders, sonidos y fuentes
 ├── tests/            # Suite de pruebas automatizadas con GUT
 │   ├── unit/         # Tests unitarios
@@ -51,6 +52,9 @@ godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs 
 # Ejecutar el juego
 godot --path . --scene res://game/main.tscn
 
+# Simulación de balance por estrategia (bot aleatorio)
+godot --headless --fixed-fps 60 -s tools/balance_sim.gd -- --games=5
+
 # Inspeccionar colisiones en tiempo de ejecución
 godot --path . --debug-collisions --scene res://game/main.tscn
 ```
@@ -67,3 +71,17 @@ godot --path . --debug-collisions --scene res://game/main.tscn
 - [`docs/06_plan_iteracion_2.md`](docs/06_plan_iteracion_2.md) — Plan de la iteración 2 (guía temporal).
 - [`docs/el_alquimista_pobre_concepto.md`](docs/el_alquimista_pobre_concepto.md) — Progresión de valor y ambientación.
 - [`docs/RULES.md`](docs/RULES.md) — Guía de estilo y reglas de codificación.
+- [`docs/notas_playtest.md`](docs/notas_playtest.md) — Simulación de balance y notas de partidas.
+
+---
+
+## Depuración (solo builds de depuración)
+
+`F1`/`F2`/`F3` cambian la estrategia de generación (clásica, uniforme 1–4,
+ponderada) y reinician la partida; `F4` sustituye el ACTUAL por una pieza de
+nivel alto; `F12` muestra FPS, piezas y semilla.
+
+## Exportación
+
+`export_presets.cfg` no se versiona. Al crear el preset de exportación hay que
+**excluir `tools/*`** de los recursos exportados (paso manual).
