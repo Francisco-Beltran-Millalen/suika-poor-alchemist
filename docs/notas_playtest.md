@@ -47,3 +47,57 @@ Tiempo real: 81.1 s
   genera piezas altas y necesita muchas más fusiones para llegar a la Piedra.
 - Son datos para contrastar con las partidas humanas de la fase 8; no justifican
   por sí solos ningún cambio de balance.
+
+---
+
+## Partidas humanas (pendiente: las rellena el usuario)
+
+**Estado: sin jugar.** Este apartado está vacío a propósito: no se inventan
+sensaciones ni resultados. Ninguna estrategia ni valor de balance se ha
+cambiado.
+
+### Cómo jugar las pruebas
+
+Juega **al menos 3 partidas por estrategia** en una build de depuración.
+`F1` = `spawn_suika_classic`, `F2` = `spawn_uniform_1_4`, `F3` = `spawn_weighted`
+(cada tecla reinicia la partida). `F4` carga una pieza de nivel alto para
+revisar el arte; `F12` muestra FPS, piezas y semilla. Copia la plantilla de
+abajo una vez por partida.
+
+### Plantilla por partida
+
+```text
+### Partida N — <estrategia>
+- Estrategia:
+- Duración:
+- Nivel máximo alcanzado:
+- Puntuación:
+- ¿Se llegó a la victoria? (sí / no):
+- Momentos frustrantes:
+- Momentos divertidos:
+- Otras notas:
+```
+
+### Resumen por estrategia (rellenar tras las partidas)
+
+| Estrategia | Partidas | Victorias | Duración media | Impresión general |
+| ---------- | -------- | --------- | -------------- | ----------------- |
+| `spawn_suika_classic` | | | | |
+| `spawn_uniform_1_4` | | | | |
+| `spawn_weighted` | | | | |
+
+### Candidatos de balance a vigilar
+
+Solo de **datos** (`GameConfig`, `piece.tscn`, presets). Cada cambio que se
+haga debe anotarse aquí con su motivo y en `03_data_design.md`.
+
+| Valor | Hoy | Por qué mirarlo |
+| ----- | --- | --------------- |
+| `game_over_delay` | 1,0 s | Corto comparado con Suika |
+| `drop_cooldown` | 0,5 s | Ritmo de soltado |
+| `bounce` (`piece.tscn`) | 0,15 | Cuánto rebotan las piezas |
+| Estrategia por defecto | `spawn_suika_classic` | La simulación con jugador aleatorio la da como la más dura (2/20 victorias) |
+
+### Cambios de balance aplicados
+
+*(Ninguno.)*
