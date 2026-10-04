@@ -983,3 +983,25 @@ aproximadamente igualado entre sí.
 
 *(El agente implementador anota aquí cualquier cambio respecto a esta guía,
 con su motivo y la fase en que ocurrió.)*
+
+1. **Fase 2 — `AssetSpec.resolve_path` y división del generador.** Se añade
+   `AssetSpec.resolve_path(entry) -> String` (resuelve las `extensions` de la
+   música y devuelve `""` si falta el archivo) para que el generador y el test
+   no repitan esa lógica. El dibujo se reparte en `tools/placeholder_images.gd`
+   y `tools/placeholder_audio.gd` (helpers estáticos sin `class_name`) para que
+   `generate_placeholders.gd` quede corto. La API pública del contrato no cambia.
+2. **Fase 4 — `BoardVisual` no llama a `Board`.** Las paredes de madera de
+   respaldo calculan sus rectángulos dentro de `BoardVisual` (con
+   `DangerZone.EXTENSION_ABOVE`) en lugar de pedírselos a `Board`: `Board`
+   referencia `BoardVisual` y una llamada inversa crearía una referencia
+   circular entre clases (la misma razón de la desviación 1 de la iteración 1).
+3. **Fase 5 — API añadida.**
+   - `EffectsLayer.setup(...)` recibe un quinto parámetro **opcional**
+     `progress_system: ProgressSystem = null` para escuchar `points_awarded`; los
+     tests existentes y los que no lo pasan siguen funcionando (sin texto
+     flotante).
+   - `PieceVisual.is_high_tier(data) -> bool` es la definición única de
+     "fusión alta" (`glow_strength >= PULSE_MIN_GLOW`) que la sacudida y el
+     audio comparten, como pide el plan (no escribir el número 6 en el código).
+   - `ProgressSystem` no emite `points_awarded` cuando el importe es 0
+     (`add_score` también lo ignora): un "+0" flotante no aporta nada.

@@ -55,7 +55,30 @@ original.
 
 ---
 
-## 3. Sprites de los materiales
+## 3. Game feel
+
+Todo es presentación: la simulación solo expone señales (`points_awarded`,
+`pieces_merged`, `max_level_merged`). **Fusión alta** = el material resultante
+tiene `glow_strength >= PieceVisual.PULSE_MIN_GLOW` (`PieceVisual.is_high_tier`,
+hoy niveles 6 y 7); la sacudida y el audio usan esa única definición.
+
+| Efecto | Disparador | Duración |
+| ------ | ---------- | -------- |
+| Aparición con rebote (`PieceVisual.play_pop_in`) | Pieza creada en `ACTIVE` (fusión) | 0,15 s, escala 0,6 → 1; la colisión tiene el tamaño completo desde el primer frame |
+| Anillo de fusión | `pieces_merged` | 0,25 s |
+| Partículas de fusión (`CPUParticles2D`, `sparkle.png`) | `pieces_merged` | 0,5 s; `10 + 2·nivel` partículas, color del resultado |
+| Texto flotante `+N` | `points_awarded` | 0,8 s, sube 40 px y se desvanece |
+| Sacudida de `Stage` (`ScreenShake`) | Fusión alta: 4 px; victoria: 14 px; fusión normal: ninguna | 0,25 s, decae y vuelve a 0 |
+| Victoria (anillos, destello, partículas, piedra fantasma) | `max_level_merged` | 1,5 s |
+| Advertencia de peligro | `danger_changed` | Mientras el ratio > 0 |
+
+`Stage` es un `Node2D` entre `World` y todo el contenido del tablero: la
+sacudida mueve a la vez recipiente, vista previa y efectos. `Main` sigue
+moviendo `World`.
+
+---
+
+## 4. Sprites de los materiales
 
 Cada `PieceData.texture` apunta a `assets/sprites/pieces/<id>.png`
 (Anexo A.1 de `06`). Convención:
@@ -76,11 +99,11 @@ Cada `PieceData.texture` apunta a `assets/sprites/pieces/<id>.png`
   trae una luz muy marcada que no debe girar. Sin textura, el placeholder
   siempre se mantiene derecho.
 - **Reducción.** La leyenda (24 px) y la vista previa reducen los sprites de
-  512 px; por eso las texturas se importan con mipmaps (§4).
+  512 px; por eso las texturas se importan con mipmaps (§5).
 
 ---
 
-## 4. Assets y placeholders
+## 5. Assets y placeholders
 
 Cada asset del Anexo A de `06_plan_iteracion_2.md` existe como **placeholder**
 con su ruta, nombre, tamaño y formato definitivos. La fuente única de rutas y
@@ -100,7 +123,7 @@ godot --headless -s tools/generate_placeholders.gd -- --force
 por defecto en las texturas: los sprites de 512 px se reducen a 24 px en la
 leyenda y sin mipmaps se verían con dientes.
 
-### 4.1. Procedimiento de integración de un asset definitivo
+### 5.1. Procedimiento de integración de un asset definitivo
 
 1. Exportar el archivo con **el mismo nombre, ruta, tamaño y formato** que su
    placeholder y sobrescribirlo.
@@ -108,7 +131,7 @@ leyenda y sin mipmaps se verían con dientes.
 3. Ejecutar la suite: `test_asset_spec.gd` falla si el tamaño o el formato no
    coinciden.
 4. Revisar en el juego (`F4` carga una pieza de nivel alto) y marcarlo como
-   "definitivo" en la tabla de §4.3.
+   "definitivo" en la tabla de §5.3.
 
 Excepciones, que requieren cambiar **una línea**:
 
@@ -123,7 +146,7 @@ Los bucles de audio no se escriben en el WAV: están en el `.import`
 (`edit/loop_mode=2`) de `sfx_danger_loop.wav` y `bgm_workshop.wav`, y se
 conservan al sustituir el archivo.
 
-### 4.2. Plantillas del artista (`docs/plantillas/`)
+### 5.2. Plantillas del artista (`docs/plantillas/`)
 
 Una imagen por tamaño, sin texto. Leyenda de colores:
 
@@ -134,7 +157,7 @@ Una imagen por tamaño, sin texto. Leyenda de colores:
 | Gris claro (material) | Interior del cuerpo; el gris oscuro exterior es el margen para adornos |
 | Rojo / azul (pergamino) | Esquinas de 32 px que no se deforman / centro que se estira |
 
-### 4.3. Estado de assets
+### 5.3. Estado de assets
 
 | Archivo | Estado |
 | ------- | ------ |

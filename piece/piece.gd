@@ -26,6 +26,9 @@ func _ready() -> void:
 	_collision_shape.shape = shape
 	mass = pow(data.radius / MASS_REFERENCE_RADIUS, 2.0)
 	_visual.setup(data)
+	# Las piezas nacidas de una fusión aparecen con rebote (las soltadas, no).
+	if state == State.ACTIVE:
+		_visual.play_pop_in()
 	body_entered.connect(_on_body_entered)
 
 

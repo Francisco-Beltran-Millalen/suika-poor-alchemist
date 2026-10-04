@@ -17,6 +17,8 @@ const DULL_HIGHLIGHT_ALPHA: float = 0.35
 ## El diámetro físico (2·radius) corresponde a esa fracción; el resto del
 ## lienzo es margen para destellos y cristales que sobresalen.
 const TEXTURE_BODY_FILL: float = 0.8
+const POP_IN_START_SCALE: float = 0.6
+const POP_IN_DURATION: float = 0.15
 
 ## Si es false, el sprite se mantiene derecho aunque la pieza ruede
 ## (la luz pintada en el arte no gira).
@@ -48,9 +50,24 @@ func setup(data: PieceData) -> void:
 	queue_redraw()
 
 
+## Animación de aparición (escala 0,6 → 1 con rebote, ~0,15 s). Solo visual:
+## la forma de colisión tiene el tamaño completo desde el primer frame.
+func play_pop_in() -> void:
+	scale = Vector2.ONE * POP_IN_START_SCALE
+	var tween: Tween = create_tween()
+	tween.tween_property(self, "scale", Vector2.ONE, POP_IN_DURATION) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
 func set_alpha(alpha: float) -> void:
 	_alpha = alpha
 	queue_redraw()
+
+
+## Una fusión es "alta" cuando su material resultante late (brilla desde
+## `PULSE_MIN_GLOW`). Única definición: la usan la sacudida y el audio.
+static func is_high_tier(data: PieceData) -> bool:
+	return data.glow_strength >= PULSE_MIN_GLOW
 
 
 ## Dibuja una pieza en `canvas`; también la usan la vista previa y los iconos.

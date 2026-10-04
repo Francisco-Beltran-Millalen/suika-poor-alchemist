@@ -65,3 +65,10 @@ func test_placeholder_without_texture_stays_upright_regardless_of_flag() -> void
 	var visual: PieceVisual = _make_rotated_visual(true, false)
 	await wait_process_frames(2)
 	assert_eq(visual.global_rotation, 0.0)
+
+
+func test_high_tier_follows_the_pulse_threshold() -> void:
+	_data.glow_strength = PieceVisual.PULSE_MIN_GLOW
+	assert_true(PieceVisual.is_high_tier(_data))
+	_data.glow_strength = PieceVisual.PULSE_MIN_GLOW - 0.01
+	assert_false(PieceVisual.is_high_tier(_data))

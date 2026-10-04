@@ -55,3 +55,18 @@ func test_initial_state_is_kept() -> void:
 	var piece: Piece = DataFactory.make_piece(_catalog.get_by_level(1), Piece.State.DROPPING)
 	add_child_autofree(piece)
 	assert_eq(piece.state, Piece.State.DROPPING)
+
+
+func test_active_piece_pops_in_and_settles_at_full_scale() -> void:
+	var piece: Piece = _add_piece(2)
+	var visual: PieceVisual = piece.get_node("Visual")
+	assert_lt(visual.scale.x, 1.0, "empieza reducida")
+	assert_eq(_shape_radius(piece), _catalog.get_by_level(2).radius, "colisión completa desde _ready")
+	await wait_seconds(0.4)
+	assert_eq(visual.scale, Vector2.ONE)
+
+
+func test_dropping_piece_does_not_pop_in() -> void:
+	var piece: Piece = DataFactory.make_piece(_catalog.get_by_level(2), Piece.State.DROPPING)
+	add_child_autofree(piece)
+	assert_eq((piece.get_node("Visual") as PieceVisual).scale, Vector2.ONE)

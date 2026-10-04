@@ -99,6 +99,7 @@ Reglas:
 | `EffectsLayer`           | Presentación | `Node2D`        | `ui/effects_layer.gd`                |
 | `PieceIcon`              | Presentación | `Control`       | `ui/piece_icon.gd`                   |
 | `BoardVisual`            | Presentación | `Node2D`        | `board/board_visual.gd`              |
+| `ScreenShake`            | Presentación | `Node`          | `ui/screen_shake.gd`                 |
 | `BoardSkin`              | Datos        | `Resource`      | `board/board_skin.gd` + `.tres`      |
 | `DebugController`        | Presentación | `Node`          | `ui/debug_controller.gd`             |
 | `GameUI`                 | Presentación | `CanvasLayer`   | `ui/game_ui.gd` + `.tscn`            |
@@ -140,6 +141,7 @@ Responsabilidad única de cada uno:
 - **BoardVisual**: dibuja una capa del recipiente (`BACK` detrás de las piezas,
   `FRONT` delante) con las texturas de `BoardSkin`, o el placeholder procedural.
   `Board` ya no dibuja nada.
+- **ScreenShake**: sacude el `Stage` tras fusiones altas y en la victoria.
 - **DebugController**: traduce F1–F4 y F12 en intenciones de depuración; solo
   actúa en builds de depuración.
 - **GameUI**: puntuación, PRÓXIMO, leyenda de rareza y pantallas de Game Over
@@ -158,20 +160,22 @@ main.tscn
 └── Main (Node)                         game/main.gd
     ├── Background (CanvasLayer)        layer −1: TextureRect del taller
     ├── World (Node2D)                  posición = origen del interior del recipiente
-    │   ├── Board (board.tscn)          en (0, 0) → coordenadas de tablero = locales de World
-    │   │   ├── Walls (StaticBody2D)    3 CollisionShape2D creados en setup()
-    │   │   ├── DangerZone (danger_zone.tscn)
-    │   │   ├── BackVisual (BoardVisual)   interior, detrás de las piezas
-    │   │   ├── Pieces (Node2D)         contenedor de las Piece
-    │   │   └── FrontVisual (BoardVisual)  paredes y reflejos, delante
-    │   ├── DropPreview (Node2D)
-    │   └── EffectsLayer (Node2D)
+    │   └── Stage (Node2D)              en (0, 0); lo sacude ScreenShake
+    │       ├── Board (board.tscn)      en (0, 0) → coordenadas de tablero = locales de World
+    │       │   ├── Walls (StaticBody2D)    3 CollisionShape2D creados en setup()
+    │       │   ├── DangerZone (danger_zone.tscn)
+    │       │   ├── BackVisual (BoardVisual)   interior, detrás de las piezas
+    │       │   ├── Pieces (Node2D)     contenedor de las Piece
+    │       │   └── FrontVisual (BoardVisual)  paredes y reflejos, delante
+    │       ├── DropPreview (Node2D)
+    │       └── EffectsLayer (Node2D)
     ├── Systems (Node)
     │   ├── PieceSpawner (Node)
     │   ├── DropSystem (Node)
     │   ├── MergeSystem (Node)
     │   ├── DangerSystem (Node)
     │   └── ProgressSystem (Node)
+    ├── ScreenShake (Node)
     ├── DropController (Node)
     ├── DebugController (Node)
     └── GameUI (game_ui.tscn, CanvasLayer)
@@ -179,8 +183,8 @@ main.tscn
 
 **Todas las posiciones de la simulación están en coordenadas de tablero**:
 origen en la esquina superior izquierda del interior y eje Y hacia abajo.
-Como `Board`, `DropPreview` y `EffectsLayer` son hijos de `World` en (0, 0),
-comparten ese sistema sin conversiones. Solo el ratón requiere convertir desde
+Como `Board`, `DropPreview` y `EffectsLayer` cuelgan de `Stage`, que está en
+(0, 0) de `World`, comparten ese sistema sin conversiones. Solo el ratón requiere convertir desde
 coordenadas globales (lo hace `DropSystem` con `board.to_local()`).
 
 `Main` coloca `World` en `((ancho_visible − container_width) / 2, 80)` y lo

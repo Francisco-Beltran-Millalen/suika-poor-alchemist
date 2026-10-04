@@ -1,6 +1,7 @@
 class_name EffectsLayer
 extends Node2D
-## Efectos visuales: anillo de fusión, advertencia de peligro y victoria.
+## Efectos visuales: anillo y partículas de fusión, puntos flotantes,
+## advertencia de peligro y victoria.
 ##
 ## Solo observa señales; no contiene reglas. Coordenadas de tablero.
 
@@ -13,9 +14,19 @@ const _GOLD := Color(1.0, 0.83, 0.42)
 const _RED := Color(0.91, 0.2, 0.24)
 const STONE_GROWTH: float = 1.8
 const _FLASH_RECT := Rect2(-2000.0, -2000.0, 6000.0, 5000.0)
+const FLOAT_DURATION: float = 0.8
+const FLOAT_RISE: float = 40.0
+const FLOAT_FONT_SIZE: int = 24
+const MERGE_PARTICLES_BASE: int = 10
+const MERGE_PARTICLES_PER_LEVEL: int = 2
+const MERGE_PARTICLES_LIFETIME: float = 0.5
+
+## Textura de las partículas de fusión. Con `null` se dibujan cuadrados.
+@export var sparkle_texture: Texture2D
 
 var _config: GameConfig
 var _rings: Array[Ring] = []
+var _floating_texts: Array[FloatingText] = []
 var _danger_ratio: float = 0.0
 var _time: float = 0.0
 var _flash_left: float = 0.0
@@ -31,6 +42,10 @@ func _process(delta: float) -> void:
 	for ring: Ring in _rings:
 		ring.age += delta
 	_rings = _rings.filter(func(ring: Ring) -> bool: return ring.age < ring.duration)
+	for text: FloatingText in _floating_texts:
+		text.age += delta
+	_floating_texts = _floating_texts.filter(
+			func(text: FloatingText) -> bool: return text.age < FLOAT_DURATION)
 	_flash_left = maxf(_flash_left - delta, 0.0)
 	if _stone != null:
 		_stone_age += delta
@@ -52,13 +67,18 @@ func _draw() -> void:
 			_draw_ring(ring)
 	if _stone != null:
 		_draw_stone()
+	for text: FloatingText in _floating_texts:
+		_draw_floating_text(text)
 	if _flash_left > 0.0:
 		draw_rect(_FLASH_RECT, Color(1.0, 1.0, 0.85, 0.6 * _flash_left / FLASH_DURATION))
 
 
+## `progress_system` es opcional: sin él no hay puntos flotantes.
 func setup(state: GameState, merge_system: MergeSystem, danger_system: DangerSystem,
-		config: GameConfig) -> void:
+		config: GameConfig, progress_system: ProgressSystem = null) -> void:
 	_config = config
+	if progress_system != null:
+		progress_system.points_awarded.connect(_on_progress_system_points_awarded)
 	state.status_changed.connect(_on_state_status_changed)
 	merge_system.pieces_merged.connect(_on_merge_system_pieces_merged)
 	merge_system.max_level_merged.connect(_on_merge_system_max_level_merged)
@@ -66,7 +86,8 @@ func setup(state: GameState, merge_system: MergeSystem, danger_system: DangerSys
 
 
 func _is_active() -> bool:
-	return _danger_ratio > 0.0 or not _rings.is_empty() or _flash_left > 0.0 or _stone != null
+	return _danger_ratio > 0.0 or not _rings.is_empty() or not _floating_texts.is_empty() \
+			or _flash_left > 0.0 or _stone != null
 
 
 func _draw_danger() -> void:
@@ -82,6 +103,21 @@ func _draw_stone() -> void:
 	var t: float = _stone_age / VICTORY_DURATION
 	var scale_factor: float = lerpf(1.0, STONE_GROWTH, 1.0 - pow(1.0 - t, 2.0))
 	PieceVisual.draw_piece(self, _stone, _stone_position, _stone.radius * scale_factor, 1.0 - t)
+
+
+# "+N" sube y se desvanece; centrado en el punto de fusión.
+func _draw_floating_text(text: FloatingText) -> void:
+	var t: float = text.age / FLOAT_DURATION
+	var rise: float = FLOAT_RISE * (1.0 - pow(1.0 - t, 2.0))
+	var font: Font = ThemeDB.fallback_font
+	var label: String = "+%d" % text.amount
+	var width: float = font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, FLOAT_FONT_SIZE).x
+	var origin: Vector2 = text.position + Vector2(-width / 2.0, -rise)
+	var alpha: float = clampf((1.0 - t) * 2.0, 0.0, 1.0)
+	draw_string_outline(font, origin, label, HORIZONTAL_ALIGNMENT_LEFT, -1, FLOAT_FONT_SIZE, 4,
+			Color(0.0, 0.0, 0.0, alpha * 0.8))
+	draw_string(font, origin, label, HORIZONTAL_ALIGNMENT_LEFT, -1, FLOAT_FONT_SIZE,
+			Color(1.0, 0.95, 0.7, alpha))
 
 
 func _draw_ring(ring: Ring) -> void:
@@ -102,6 +138,34 @@ func _add_ring(center: Vector2, color: Color, start_radius: float, end_radius: f
 	ring.age = -delay
 	_rings.append(ring)
 	queue_redraw()
+
+
+# Ráfaga corta con el color del resultado; crece con el nivel.
+func _spawn_merge_particles(center: Vector2, result: PieceData) -> void:
+	var particles := CPUParticles2D.new()
+	particles.position = center
+	particles.one_shot = true
+	particles.amount = MERGE_PARTICLES_BASE + MERGE_PARTICLES_PER_LEVEL * result.level
+	particles.lifetime = MERGE_PARTICLES_LIFETIME
+	particles.explosiveness = 0.9
+	particles.spread = 180.0
+	particles.gravity = Vector2.ZERO
+	particles.initial_velocity_min = 60.0
+	particles.initial_velocity_max = 60.0 + result.radius * 2.0
+	particles.damping_min = 40.0
+	particles.damping_max = 80.0
+	particles.texture = sparkle_texture
+	# Con textura de 64 px, la escala es una fracción; sin ella, son cuadrados de ~1 px.
+	particles.scale_amount_min = 0.15 if sparkle_texture != null else 2.0
+	particles.scale_amount_max = 0.35 if sparkle_texture != null else 4.0
+	var ramp := Gradient.new()
+	ramp.offsets = PackedFloat32Array([0.0, 1.0])
+	var tint: Color = result.color.lightened(0.35)
+	ramp.colors = PackedColorArray([tint, Color(tint, 0.0)])
+	particles.color_ramp = ramp
+	particles.finished.connect(particles.queue_free)
+	add_child(particles)
+	particles.emitting = true
 
 
 func _spawn_victory_particles(center: Vector2) -> void:
@@ -128,6 +192,7 @@ func _spawn_victory_particles(center: Vector2) -> void:
 
 func _clear_effects() -> void:
 	_rings.clear()
+	_floating_texts.clear()
 	_flash_left = 0.0
 	_stone = null
 	for child: Node in get_children():
@@ -145,6 +210,7 @@ func _on_state_status_changed(status: GameState.Status) -> void:
 func _on_merge_system_pieces_merged(_source: PieceData, result: PieceData, merge_position: Vector2) -> void:
 	_add_ring(merge_position, result.color.lightened(0.3), result.radius * 0.8, result.radius * 2.0,
 			MERGE_RING_DURATION)
+	_spawn_merge_particles(merge_position, result)
 
 
 func _on_merge_system_max_level_merged(source: PieceData, merge_position: Vector2) -> void:
@@ -160,6 +226,14 @@ func _on_merge_system_max_level_merged(source: PieceData, merge_position: Vector
 	_spawn_victory_particles(merge_position)
 
 
+func _on_progress_system_points_awarded(amount: int, award_position: Vector2) -> void:
+	var text := FloatingText.new()
+	text.amount = amount
+	text.position = award_position
+	_floating_texts.append(text)
+	queue_redraw()
+
+
 func _on_danger_system_danger_changed(ratio: float) -> void:
 	_danger_ratio = ratio
 	queue_redraw()
@@ -171,4 +245,10 @@ class Ring extends RefCounted:
 	var start_radius: float
 	var end_radius: float
 	var duration: float
+	var age: float
+
+
+class FloatingText extends RefCounted:
+	var amount: int
+	var position: Vector2
 	var age: float

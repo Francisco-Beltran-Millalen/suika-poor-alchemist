@@ -18,14 +18,16 @@ var _debug_strategy_name: String = ""
 var _debug_timer: Timer
 
 @onready var _world: Node2D = $World
-@onready var _board: Board = $World/Board
-@onready var _preview: DropPreview = $World/DropPreview
-@onready var _effects: EffectsLayer = $World/EffectsLayer
+@onready var _stage: Node2D = $World/Stage
+@onready var _board: Board = $World/Stage/Board
+@onready var _preview: DropPreview = $World/Stage/DropPreview
+@onready var _effects: EffectsLayer = $World/Stage/EffectsLayer
 @onready var _spawner: PieceSpawner = $Systems/PieceSpawner
 @onready var _drop_system: DropSystem = $Systems/DropSystem
 @onready var _merge_system: MergeSystem = $Systems/MergeSystem
 @onready var _danger_system: DangerSystem = $Systems/DangerSystem
 @onready var _progress_system: ProgressSystem = $Systems/ProgressSystem
+@onready var _screen_shake: ScreenShake = $ScreenShake
 @onready var _drop_controller: DropController = $DropController
 @onready var _ui: GameUI = $GameUI
 @onready var _debug_controller: DebugController = $DebugController
@@ -91,7 +93,8 @@ func _compose() -> void:
 	_danger_system.setup(_state, _board.danger_zone, config)
 	_progress_system.setup(_state, config, _merge_system)
 	_preview.setup(_state, _drop_system, config)
-	_effects.setup(_state, _merge_system, _danger_system, config)
+	_effects.setup(_state, _merge_system, _danger_system, config, _progress_system)
+	_screen_shake.setup(_stage, _merge_system)
 	_ui.setup(_state, config.piece_catalog)
 	_drop_controller.aim_requested.connect(_drop_system.request_aim_global)
 	_drop_controller.aim_step_requested.connect(_drop_system.request_aim_step)
