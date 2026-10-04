@@ -75,6 +75,12 @@ func advance_queue(new_next: PieceData) -> PieceData:
 	return outgoing
 
 
+## Sustituye el ACTUAL sin avanzar la cola. Solo para depuración.
+func debug_set_current(data: PieceData) -> void:
+	_current_piece = data
+	current_piece_changed.emit(_current_piece)
+
+
 ## `PLAYING` → `GAME_OVER`.
 func set_game_over() -> bool:
 	return _transition(Status.PLAYING, Status.GAME_OVER)

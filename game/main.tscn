@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://board/board.tscn" id="2_board"]
@@ -11,9 +11,15 @@
 [ext_resource type="Script" path="res://systems/danger_system.gd" id="9_danger"]
 [ext_resource type="Script" path="res://ui/effects_layer.gd" id="10_effects"]
 [ext_resource type="PackedScene" path="res://ui/game_ui.tscn" id="11_ui"]
+[ext_resource type="Script" path="res://ui/debug_controller.gd" id="12_debug"]
+[ext_resource type="Script" path="res://piece/spawn/spawn_strategy.gd" id="16_strategy"]
+[ext_resource type="Resource" path="res://piece/spawn/spawn_suika_classic.tres" id="13_classic"]
+[ext_resource type="Resource" path="res://piece/spawn/spawn_uniform_1_4.tres" id="14_uniform"]
+[ext_resource type="Resource" path="res://piece/spawn/spawn_weighted.tres" id="15_weighted"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
+debug_strategies = Array[ExtResource("16_strategy")]([ExtResource("13_classic"), ExtResource("14_uniform"), ExtResource("15_weighted")])
 
 [node name="World" type="Node2D" parent="."]
 
@@ -44,5 +50,8 @@ script = ExtResource("8_progress")
 
 [node name="DropController" type="Node" parent="."]
 script = ExtResource("6_controller")
+
+[node name="DebugController" type="Node" parent="."]
+script = ExtResource("12_debug")
 
 [node name="GameUI" parent="." instance=ExtResource("11_ui")]

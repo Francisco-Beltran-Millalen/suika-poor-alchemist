@@ -98,6 +98,7 @@ Reglas:
 | `DropPreview`            | Presentación | `Node2D`        | `ui/drop_preview.gd`                 |
 | `EffectsLayer`           | Presentación | `Node2D`        | `ui/effects_layer.gd`                |
 | `PieceIcon`              | Presentación | `Control`       | `ui/piece_icon.gd`                   |
+| `DebugController`        | Presentación | `Node`          | `ui/debug_controller.gd`             |
 | `GameUI`                 | Presentación | `CanvasLayer`   | `ui/game_ui.gd` + `.tscn`            |
 
 Responsabilidad única de cada uno:
@@ -134,6 +135,8 @@ Responsabilidad única de cada uno:
   línea guía.
 - **EffectsLayer**: efectos de fusión, advertencia de peligro y animación de
   victoria.
+- **DebugController**: traduce F1–F4 y F12 en intenciones de depuración; solo
+  actúa en builds de depuración.
 - **GameUI**: puntuación, PRÓXIMO, leyenda de rareza y pantallas de Game Over
   y Victoria, con el botón de reinicio.
 
@@ -162,6 +165,7 @@ main.tscn
     │   ├── DangerSystem (Node)
     │   └── ProgressSystem (Node)
     ├── DropController (Node)
+    ├── DebugController (Node)
     └── GameUI (game_ui.tscn, CanvasLayer)
 ```
 
@@ -196,6 +200,9 @@ DropController.aim_requested(global_x)        ─▶ DropSystem.request_aim_glob
 DropController.aim_step_requested(dir, delta) ─▶ DropSystem.request_aim_step
 DropController.drop_requested()               ─▶ DropSystem.request_drop
 DropController.restart_requested()            ─▶ Main._on_restart_requested
+DebugController.strategy_requested(i)         ─▶ Main (cambia estrategia y reinicia)
+DebugController.high_piece_requested()        ─▶ Main ─▶ GameState.debug_set_current
+DebugController.overlay_toggled()             ─▶ Main ─▶ GameUI.set_debug_text
 GameUI.restart_requested()                    ─▶ Main._on_restart_requested
 
 PieceSpawner.piece_spawned(piece)             ─▶ MergeSystem.register_piece

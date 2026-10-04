@@ -128,3 +128,16 @@ func test_reset_emits_even_when_already_clean() -> void:
 	_state.reset()
 	assert_signal_emit_count(_state, "score_changed", 1)
 	assert_signal_emit_count(_state, "status_changed", 1)
+
+
+func test_debug_set_current_replaces_current_only() -> void:
+	var first: PieceData = _catalog.get_by_level(1)
+	var second: PieceData = _catalog.get_by_level(2)
+	var replacement: PieceData = _catalog.get_by_level(4)
+	_state.set_queue(first, second)
+	watch_signals(_state)
+	_state.debug_set_current(replacement)
+	assert_same(_state.get_current_piece(), replacement)
+	assert_same(_state.get_next_piece(), second, "el PRÓXIMO no cambia")
+	assert_signal_emit_count(_state, "current_piece_changed", 1)
+	assert_signal_not_emitted(_state, "next_piece_changed")

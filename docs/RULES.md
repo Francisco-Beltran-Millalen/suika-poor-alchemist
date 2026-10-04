@@ -90,6 +90,7 @@ res://
 │   └── danger_system.gd / progress_system.gd
 ├── ui/                              # Presentación, input y efectos
 │   ├── drop_controller.gd / drop_preview.gd / effects_layer.gd / piece_icon.gd
+│   ├── debug_controller.gd
 │   └── game_ui.tscn / game_ui.gd
 ├── assets/                          # Sprites, shaders, audio, fuentes
 ├── tests/                           # Tests automatizados con GUT

@@ -68,3 +68,20 @@ func test_controller_restart_is_ignored_while_playing() -> void:
 	assert_eq(_main.get_board().get_pieces().size(), 1)
 	assert_eq(_main.get_state().get_score(), 5)
 	assert_true(_main.get_state().is_playing())
+
+
+func test_debug_strategy_request_restarts_the_game() -> void:
+	_spawn(3, Vector2(300.0, 500.0))
+	_main.get_state().add_score(7)
+	_main.get_debug_controller().strategy_requested.emit(1)
+	var state: GameState = _main.get_state()
+	assert_eq(state.get_status(), GameState.Status.PLAYING)
+	assert_eq(state.get_score(), 0)
+	assert_eq(_main.get_board().get_pieces().size(), 0)
+
+
+func test_debug_high_piece_replaces_current_with_one_below_max() -> void:
+	var catalog: PieceCatalog = _config.piece_catalog
+	_main.get_debug_controller().high_piece_requested.emit()
+	assert_same(_main.get_state().get_current_piece(),
+			catalog.get_by_level(catalog.get_max_level() - 1))

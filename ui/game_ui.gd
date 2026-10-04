@@ -19,6 +19,7 @@ var _state: GameState
 @onready var _victory_view: PanelContainer = $Root/VictoryView
 @onready var _victory_score: Label = $Root/VictoryView/VBox/FinalScore
 @onready var _victory_timer: Timer = $VictoryTimer
+@onready var _debug_label: Label = $Root/DebugLabel
 
 
 func _ready() -> void:
@@ -36,6 +37,12 @@ func setup(state: GameState, catalog: PieceCatalog) -> void:
 	_on_state_score_changed(state.get_score())
 	_on_state_next_piece_changed(state.get_next_piece())
 	_on_state_status_changed(state.get_status())
+
+
+## Texto de depuración en una esquina; cadena vacía lo oculta.
+func set_debug_text(text: String) -> void:
+	_debug_label.text = text
+	_debug_label.visible = not text.is_empty()
 
 
 func _build_legend(catalog: PieceCatalog) -> void:
