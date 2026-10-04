@@ -65,3 +65,11 @@ func test_no_embedded_piece_resources() -> void:
 	for piece: PieceData in _catalog.pieces:
 		var text: String = FileAccess.get_file_as_string(piece.resource_path)
 		assert_false(text.contains("[sub_resource"), "%s no incrusta recursos" % piece.id)
+
+
+func test_every_material_uses_its_sprite() -> void:
+	for piece: PieceData in _catalog.pieces:
+		assert_not_null(piece.texture, "%s tiene textura" % piece.id)
+		if piece.texture != null:
+			assert_eq(piece.texture.resource_path,
+					"res://assets/sprites/pieces/%s.png" % piece.id, "ruta de %s" % piece.id)

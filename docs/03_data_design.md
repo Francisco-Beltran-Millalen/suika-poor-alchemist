@@ -48,7 +48,7 @@ piezas de Cobre comparten el mismo `copper.tres`.
 | Progression       | `next_piece`    | `PieceData`   | `level + 1`, o `null` solo en el nivel máximo               |
 | Scoring           | `score_value`   | `int`         | ≥ 0; puntos otorgados al **crear** esta pieza por fusión    |
 | Presentation      | `color`         | `Color`       | Color base del placeholder y del tinte                      |
-| Presentation      | `texture`       | `Texture2D`   | Opcional. `null` → se dibuja un círculo con `color`         |
+| Presentation      | `texture`       | `Texture2D`   | Opcional, **cuadrada** (la valida el catálogo). `null` → círculo con `color` |
 | Presentation      | `glow_strength` | `float`       | 0.0–1.0. Intensidad del brillo (comunica rareza)            |
 
 **Decisiones:**

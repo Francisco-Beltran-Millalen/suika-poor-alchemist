@@ -28,7 +28,7 @@ extends Resource
 
 @export_group("Presentation")
 @export var color: Color = Color.WHITE
-## Opcional. Si es `null` se dibuja un círculo con `color`.
+## Opcional, cuadrada (lienzo con el cuerpo al 80 %). Si es `null` se dibuja un círculo con `color`.
 @export var texture: Texture2D
 @export_range(0.0, 1.0) var glow_strength: float = 0.0
 

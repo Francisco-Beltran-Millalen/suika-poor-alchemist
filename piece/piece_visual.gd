@@ -1,6 +1,7 @@
 class_name PieceVisual
 extends Node2D
-## Dibujo placeholder de una pieza (círculo con halo, borde, reflejo y nivel).
+## Dibuja un material: con textura, el sprite sobre su halo; sin ella, un
+## círculo placeholder con halo, borde, reflejo y número de nivel.
 
 const HALO_STEPS: int = 4
 const HALO_EXPANSION: float = 0.45
@@ -12,16 +13,26 @@ const PULSE_SPEED: float = 2.5
 ## Los materiales sin brillo (comunes) se ven más opacos y grises.
 const DULL_DESATURATION: float = 0.25
 const DULL_HIGHLIGHT_ALPHA: float = 0.35
+## Fracción del lienzo que ocupa el cuerpo redondo del sprite (Anexo A.1).
+## El diámetro físico (2·radius) corresponde a esa fracción; el resto del
+## lienzo es margen para destellos y cristales que sobresalen.
+const TEXTURE_BODY_FILL: float = 0.8
+
+## Si es false, el sprite se mantiene derecho aunque la pieza ruede
+## (la luz pintada en el arte no gira).
+@export var rotate_texture: bool = true
 
 var _data: PieceData
 var _alpha: float = 1.0
 
 
 func _process(_delta: float) -> void:
-	# Sin textura el número y el reflejo deben quedar derechos aunque la pieza ruede.
+	# Sin textura el número y el reflejo deben quedar derechos aunque la pieza ruede;
+	# con textura, solo si el arte lo pide (`rotate_texture`).
 	if _data == null:
 		return
-	if _data.texture == null and global_rotation != 0.0:
+	var keep_upright: bool = _data.texture == null or not rotate_texture
+	if keep_upright and global_rotation != 0.0:
 		global_rotation = 0.0
 	if _data.glow_strength >= PULSE_MIN_GLOW:
 		queue_redraw()
@@ -45,17 +56,18 @@ func set_alpha(alpha: float) -> void:
 ## Dibuja una pieza en `canvas`; también la usan la vista previa y los iconos.
 static func draw_piece(canvas: CanvasItem, data: PieceData, center: Vector2,
 		radius: float, alpha: float = 1.0) -> void:
+	_draw_halo(canvas, data, center, radius, alpha)
+	if data.texture != null:
+		var side: float = 2.0 * radius / TEXTURE_BODY_FILL
+		var half := Vector2(side, side) / 2.0
+		canvas.draw_texture_rect(data.texture, Rect2(center - half, half * 2.0), false,
+				Color(1.0, 1.0, 1.0, alpha))
+		return
 	var color: Color = data.color
 	if data.glow_strength <= 0.0:
 		color.s *= 1.0 - DULL_DESATURATION
 	color.a = alpha
-	_draw_halo(canvas, data, center, radius, alpha)
-	if data.texture != null:
-		var half := Vector2(radius, radius)
-		canvas.draw_texture_rect(data.texture, Rect2(center - half, half * 2.0), false,
-				Color(1.0, 1.0, 1.0, alpha))
-	else:
-		canvas.draw_circle(center, radius, color)
+	canvas.draw_circle(center, radius, color)
 	var border: Color = data.color.darkened(0.35)
 	border.a = alpha
 	canvas.draw_arc(center, radius, 0.0, TAU, 48, border, BORDER_WIDTH, true)

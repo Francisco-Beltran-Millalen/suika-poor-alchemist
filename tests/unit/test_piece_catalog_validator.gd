@@ -115,3 +115,19 @@ func test_next_piece_outside_catalog() -> void:
 	outsider.radius = 99.0
 	catalog.pieces[1].next_piece = outsider
 	assert_true(_has_error(PieceCatalogValidator.validate(catalog), "no pertenece al catálogo"))
+
+
+func test_non_square_texture_is_an_error() -> void:
+	var catalog: PieceCatalog = DataFactory.make_catalog()
+	catalog.pieces[0].texture = ImageTexture.create_from_image(
+			Image.create(64, 32, false, Image.FORMAT_RGBA8))
+	assert_true(_has_error(PieceCatalogValidator.validate(catalog), "la textura debe ser cuadrada"))
+	_break_cycles(catalog)
+
+
+func test_square_or_null_texture_is_valid() -> void:
+	var catalog: PieceCatalog = DataFactory.make_catalog()
+	catalog.pieces[0].texture = ImageTexture.create_from_image(
+			Image.create(64, 64, false, Image.FORMAT_RGBA8))
+	assert_eq(PieceCatalogValidator.validate(catalog).size(), 0)
+	_break_cycles(catalog)

@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="PieceData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="PieceData" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://piece/piece_data.gd" id="1_data"]
 [ext_resource type="Resource" path="res://piece/data/gold.tres" id="2_next"]
+[ext_resource type="Texture2D" path="res://assets/sprites/pieces/silver.png" id="9_tex"]
 
 [resource]
 script = ExtResource("1_data")
@@ -13,4 +14,5 @@ radius = 37.0
 next_piece = ExtResource("2_next")
 score_value = 10
 color = Color(0.788235, 0.807843, 0.839216, 1)
+texture = ExtResource("9_tex")
 glow_strength = 0.15

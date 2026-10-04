@@ -18,7 +18,32 @@ opcional: con `null` el juego usa el dibujo procedural o el silencio.
 
 ---
 
-## 3. Assets y placeholders
+## 3. Sprites de los materiales
+
+Cada `PieceData.texture` apunta a `assets/sprites/pieces/<id>.png`
+(Anexo A.1 de `06`). Convención:
+
+- **Lienzo** de 512 × 512 px, transparente y cuadrado (el catálogo rechaza una
+  textura no cuadrada).
+- **Cuerpo redondo** centrado de 410 px de diámetro: el 80 % del lienzo
+  (`PieceVisual.TEXTURE_BODY_FILL`). El diámetro físico (`2·radius`)
+  corresponde a ese 80 %, así que el sprite se dibuja en un cuadrado de lado
+  `2·radius / 0,8`. El 10 % restante por lado es margen para adornos finos que
+  pueden solaparse con las vecinas.
+- **Qué dibuja el código y qué trae el arte.** Código: el halo de brillo
+  (`glow_strength`) por detrás. Arte: todo lo demás (cuerpo, borde, luz). Con
+  textura, el código **no** pinta círculo, borde, reflejo ni número; sin
+  textura, dibuja el placeholder procedural completo.
+- **Rotación.** `PieceVisual.rotate_texture` (`true` por defecto) hace que el
+  sprite gire con la pieza. Con `false`, se mantiene derecho: sirve si el arte
+  trae una luz muy marcada que no debe girar. Sin textura, el placeholder
+  siempre se mantiene derecho.
+- **Reducción.** La leyenda (24 px) y la vista previa reducen los sprites de
+  512 px; por eso las texturas se importan con mipmaps (§4).
+
+---
+
+## 4. Assets y placeholders
 
 Cada asset del Anexo A de `06_plan_iteracion_2.md` existe como **placeholder**
 con su ruta, nombre, tamaño y formato definitivos. La fuente única de rutas y
@@ -38,7 +63,7 @@ godot --headless -s tools/generate_placeholders.gd -- --force
 por defecto en las texturas: los sprites de 512 px se reducen a 24 px en la
 leyenda y sin mipmaps se verían con dientes.
 
-### 3.1. Procedimiento de integración de un asset definitivo
+### 4.1. Procedimiento de integración de un asset definitivo
 
 1. Exportar el archivo con **el mismo nombre, ruta, tamaño y formato** que su
    placeholder y sobrescribirlo.
@@ -46,7 +71,7 @@ leyenda y sin mipmaps se verían con dientes.
 3. Ejecutar la suite: `test_asset_spec.gd` falla si el tamaño o el formato no
    coinciden.
 4. Revisar en el juego (`F4` carga una pieza de nivel alto) y marcarlo como
-   "definitivo" en la tabla de §3.3.
+   "definitivo" en la tabla de §4.3.
 
 Excepciones, que requieren cambiar **una línea**:
 
@@ -61,7 +86,7 @@ Los bucles de audio no se escriben en el WAV: están en el `.import`
 (`edit/loop_mode=2`) de `sfx_danger_loop.wav` y `bgm_workshop.wav`, y se
 conservan al sustituir el archivo.
 
-### 3.2. Plantillas del artista (`docs/plantillas/`)
+### 4.2. Plantillas del artista (`docs/plantillas/`)
 
 Una imagen por tamaño, sin texto. Leyenda de colores:
 
@@ -72,7 +97,7 @@ Una imagen por tamaño, sin texto. Leyenda de colores:
 | Gris claro (material) | Interior del cuerpo; el gris oscuro exterior es el margen para adornos |
 | Rojo / azul (pergamino) | Esquinas de 32 px que no se deforman / centro que se estira |
 
-### 3.3. Estado de assets
+### 4.3. Estado de assets
 
 | Archivo | Estado |
 | ------- | ------ |

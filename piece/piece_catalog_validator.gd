@@ -54,6 +54,8 @@ static func _check_values(piece: PieceData, name: String, index: int,
 		errors.append("%s: score_value negativo" % name)
 	if piece.glow_strength < 0.0 or piece.glow_strength > 1.0:
 		errors.append("%s: glow_strength fuera de [0, 1]" % name)
+	if piece.texture != null and piece.texture.get_width() != piece.texture.get_height():
+		errors.append("%s: la textura debe ser cuadrada" % name)
 
 
 static func _check_progression(piece: PieceData, name: String, index: int, count: int,

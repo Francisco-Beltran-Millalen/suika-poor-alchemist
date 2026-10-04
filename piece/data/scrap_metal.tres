@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="PieceData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="PieceData" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://piece/piece_data.gd" id="1_data"]
 [ext_resource type="Resource" path="res://piece/data/copper.tres" id="2_next"]
+[ext_resource type="Texture2D" path="res://assets/sprites/pieces/scrap_metal.png" id="9_tex"]
 
 [resource]
 script = ExtResource("1_data")
@@ -13,4 +14,5 @@ radius = 22.0
 next_piece = ExtResource("2_next")
 score_value = 3
 color = Color(0.541176, 0.435294, 0.352941, 1)
+texture = ExtResource("9_tex")
 glow_strength = 0.0
