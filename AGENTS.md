@@ -13,6 +13,7 @@ Documentos canónicos de diseño en `docs/`:
 - `docs/04_gameplay_design.md` — Mecánicas de juego y resolución de fusiones
 - `docs/05_plan_implementacion.md` — Plan de implementación paso a paso (guía temporal, no diseño canónico)
 - `docs/06_plan_iteracion_2.md` — Plan de la iteración 2 (guía temporal, no diseño canónico)
+- `docs/08_plan_iteracion_3.md` — Plan de la iteración 3 (guía temporal, no diseño canónico)
 - `docs/07_diseno_presentacion.md` — Arte, escenario, efectos, audio, pantallas y procedimiento de assets
 - `docs/notas_playtest.md` — Simulación de balance y notas de partidas
 - `docs/el_alquimista_pobre_concepto.md` — Fantasía y progresión visual

@@ -69,6 +69,7 @@ godot --path . --debug-collisions --scene res://game/main.tscn
 - [`docs/04_gameplay_design.md`](docs/04_gameplay_design.md) — Reglas detalladas de colocación y fusión.
 - [`docs/05_plan_implementacion.md`](docs/05_plan_implementacion.md) — Plan de implementación paso a paso (guía temporal).
 - [`docs/06_plan_iteracion_2.md`](docs/06_plan_iteracion_2.md) — Plan de la iteración 2 (guía temporal).
+- [`docs/08_plan_iteracion_3.md`](docs/08_plan_iteracion_3.md) — Plan de la iteración 3: opciones, distribución, táctil y web (guía temporal).
 - [`docs/07_diseno_presentacion.md`](docs/07_diseno_presentacion.md) — Arte, escenario, efectos, audio y pantallas.
 - [`docs/el_alquimista_pobre_concepto.md`](docs/el_alquimista_pobre_concepto.md) — Progresión de valor y ambientación.
 - [`docs/RULES.md`](docs/RULES.md) — Guía de estilo y reglas de codificación.
