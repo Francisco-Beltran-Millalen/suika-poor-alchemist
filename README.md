@@ -4,7 +4,7 @@ Juego de puzzle y física inspirado en la mecánica de **Suika Game**, ambientad
 taller alquímico donde un alquimista chatarrero transmuta materiales desde chatarra
 y metales comunes hasta la mítica Piedra Filosofal.
 
-Estado: **jugable de principio a fin**; iteración 2 en curso ([`docs/06_plan_iteracion_2.md`](docs/06_plan_iteracion_2.md)).
+Estado: **jugable de principio a fin**; iteración 2 implementada (fases 0–8) salvo las pruebas de balance con partidas humanas y el arte, la fuente y el audio definitivos ([`docs/06_plan_iteracion_2.md`](docs/06_plan_iteracion_2.md)).
 
 ---
 

@@ -1019,3 +1019,10 @@ con su motivo y la fase en que ocurrió.)*
    activa si el pergamino no tiene textura. Además, la etiqueta de rareza es
    una "píldora" (`PanelContainer` + `Label`) y el panel derecho se ensancha
    40 px para que quepa en una línea.
+7. **Fase 8 — balance (pasos 4 y 5) sin hacer.** Requiere partidas humanas;
+   `docs/notas_playtest.md` tiene la plantilla y los candidatos, vacía a
+   propósito. No se ha cambiado ningún valor de `GameConfig`, `piece.tscn` ni de
+   los presets, y no hay commit `balance(config)`.
+8. **Fase 9 — sin implementar**, como se pidió. Tampoco hay fuente definitiva ni
+   assets finales: el juego usa los placeholders de la fase 2.
+
