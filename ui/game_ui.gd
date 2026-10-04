@@ -1,12 +1,16 @@
 class_name GameUI
 extends CanvasLayer
-## HUD: puntuación, PRÓXIMO, leyenda de rareza y pantallas de fin de partida.
+## HUD: puntuación, récord, PRÓXIMO, leyenda de rareza y las pantallas de
+## título, pausa y fin de partida. Procesa también en pausa.
 ##
 ## Observa el estado; nunca lo modifica. El reinicio sale como intención.
 
 signal restart_requested
 ## Se emite al pulsar cualquier botón (para el sonido de clic).
 signal button_pressed
+signal resume_requested
+## Botón de la vista de título.
+signal start_requested
 
 ## Segundos hasta mostrar la pantalla de victoria (deja ver la animación).
 @export var victory_view_delay: float = 1.5
@@ -25,6 +29,8 @@ var _is_new_record: bool = false
 @onready var _victory_score: Label = $Root/VictoryView/VBox/FinalScore
 @onready var _victory_timer: Timer = $VictoryTimer
 @onready var _debug_label: Label = $Root/DebugLabel
+@onready var _title_view: PanelContainer = $Root/TitleView
+@onready var _pause_view: PanelContainer = $Root/PauseView
 @onready var _best_value: Label = $Root/LeftPanel/BestValue
 @onready var _game_over_record: Label = $Root/GameOverView/VBox/NewRecord
 @onready var _victory_record: Label = $Root/VictoryView/VBox/NewRecord
@@ -33,6 +39,9 @@ var _is_new_record: bool = false
 func _ready() -> void:
 	($Root/GameOverView/VBox/RestartButton as Button).pressed.connect(_on_restart_button_pressed)
 	($Root/VictoryView/VBox/RestartButton as Button).pressed.connect(_on_restart_button_pressed)
+	($Root/TitleView/VBox/StartButton as Button).pressed.connect(_on_start_button_pressed)
+	($Root/PauseView/VBox/ResumeButton as Button).pressed.connect(_on_resume_button_pressed)
+	($Root/PauseView/VBox/RestartButton as Button).pressed.connect(_on_restart_button_pressed)
 	_victory_timer.timeout.connect(_on_victory_timer_timeout)
 
 
@@ -51,6 +60,11 @@ func setup(state: GameState, catalog: PieceCatalog, scores: ScoreStore = null) -
 	_on_state_score_changed(state.get_score())
 	_on_state_next_piece_changed(state.get_next_piece())
 	_on_state_status_changed(state.get_status())
+
+
+## Muestra u oculta la vista de pausa.
+func set_paused(paused: bool) -> void:
+	_pause_view.visible = paused
 
 
 ## Texto de depuración en una esquina; cadena vacía lo oculta.
@@ -102,6 +116,7 @@ func _on_state_status_changed(status: GameState.Status) -> void:
 	_victory_timer.stop()
 	_game_over_view.hide()
 	_victory_view.hide()
+	_title_view.visible = status == GameState.Status.READY
 	if not _state.is_finished():
 		_is_new_record = false
 		_game_over_record.hide()
@@ -128,6 +143,16 @@ func _on_scores_new_record(_score: int) -> void:
 
 func _on_victory_timer_timeout() -> void:
 	_show_end_view(_victory_view)
+
+
+func _on_start_button_pressed() -> void:
+	button_pressed.emit()
+	start_requested.emit()
+
+
+func _on_resume_button_pressed() -> void:
+	button_pressed.emit()
+	resume_requested.emit()
 
 
 func _on_restart_button_pressed() -> void:

@@ -88,6 +88,9 @@ func _start_game(job: Dictionary) -> void:
 	config.rng_seed = job["seed"] as int
 	_main = MAIN_SCENE.instantiate() as Main
 	_main.config = config
+	# Sin título la partida arranca sola; sin ruta de récord no se escribe el del usuario.
+	_main.show_title = false
+	_main.records_path = ""
 	for node_name: String in PRESENTATION_NODES:
 		var node: Node = _main.find_child(node_name, true, false)
 		if node != null:

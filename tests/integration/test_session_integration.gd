@@ -15,7 +15,21 @@ func before_each() -> void:
 	_main = (load("res://game/main.tscn") as PackedScene).instantiate() as Main
 	_main.config = _config
 	_main.records_path = ""
+	_main.show_title = false
 	add_child_autofree(_main)
+
+
+func after_each() -> void:
+	get_tree().paused = false
+
+
+func _make_titled_main() -> Main:
+	var titled := (load("res://game/main.tscn") as PackedScene).instantiate() as Main
+	titled.config = _config
+	titled.records_path = ""
+	titled.show_title = true
+	add_child_autofree(titled)
+	return titled
 
 
 func _spawn(level: int, pos: Vector2) -> Piece:
@@ -100,3 +114,80 @@ func test_finished_game_without_points_is_not_a_record() -> void:
 	_main.get_state().set_game_over()
 	var label: Label = _main.get_ui().get_node("Root/GameOverView/VBox/NewRecord") as Label
 	assert_false(label.visible)
+
+
+func test_title_waits_in_ready_and_the_starting_click_does_not_drop() -> void:
+	var titled: Main = _make_titled_main()
+	var state: GameState = titled.get_state()
+	assert_eq(state.get_status(), GameState.Status.READY)
+	assert_eq(titled.get_board().get_pieces().size(), 0)
+	assert_true(titled.get_ui().get_node("Root/TitleView").visible, "se ve la vista de título")
+	titled.get_drop_controller().drop_requested.emit()
+	assert_eq(state.get_status(), GameState.Status.PLAYING)
+	assert_eq(titled.get_board().get_pieces().size(), 0, "el clic que empieza no suelta")
+	assert_false(titled.get_ui().get_node("Root/TitleView").visible)
+	titled.get_drop_controller().drop_requested.emit()
+	assert_eq(titled.get_board().get_pieces().size(), 1, "el siguiente clic sí suelta")
+
+
+func test_title_button_starts_the_game() -> void:
+	var titled: Main = _make_titled_main()
+	titled.get_ui().start_requested.emit()
+	assert_true(titled.get_state().is_playing())
+	assert_eq(titled.get_board().get_pieces().size(), 0)
+
+
+func test_pause_request_pauses_and_resumes_the_tree() -> void:
+	_main.get_drop_controller().pause_requested.emit()
+	assert_true(get_tree().paused)
+	assert_true(_main.get_ui().get_node("Root/PauseView").visible)
+	_main.get_drop_controller().pause_requested.emit()
+	assert_false(get_tree().paused)
+	assert_false(_main.get_ui().get_node("Root/PauseView").visible)
+
+
+func test_drop_request_while_paused_creates_no_piece() -> void:
+	_main.get_drop_controller().pause_requested.emit()
+	_main.get_drop_controller().drop_requested.emit()
+	assert_eq(_main.get_board().get_pieces().size(), 0)
+	_main.get_drop_controller().pause_requested.emit()
+	_main.get_drop_controller().drop_requested.emit()
+	assert_eq(_main.get_board().get_pieces().size(), 1, "al reanudar, suelta")
+
+
+func test_pause_request_outside_playing_does_nothing() -> void:
+	_main.get_state().set_game_over()
+	_main.get_drop_controller().pause_requested.emit()
+	assert_false(get_tree().paused)
+	var titled: Main = _make_titled_main()
+	titled.get_drop_controller().pause_requested.emit()
+	assert_false(get_tree().paused, "tampoco en el título")
+
+
+func test_resume_button_unpauses() -> void:
+	_main.get_drop_controller().pause_requested.emit()
+	_main.get_ui().resume_requested.emit()
+	assert_false(get_tree().paused)
+
+
+func test_restart_while_paused_restarts_and_unpauses() -> void:
+	_spawn(3, Vector2(300.0, 500.0))
+	_main.get_state().add_score(9)
+	_main.get_drop_controller().pause_requested.emit()
+	_main.get_ui().restart_requested.emit()
+	assert_false(get_tree().paused)
+	assert_false(_main.get_ui().get_node("Root/PauseView").visible)
+	assert_eq(_main.get_board().get_pieces().size(), 0)
+	assert_eq(_main.get_state().get_score(), 0)
+	assert_true(_main.get_state().is_playing())
+
+
+func test_losing_window_focus_pauses_a_running_game() -> void:
+	_main.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	assert_true(get_tree().paused)
+
+
+func test_losing_window_focus_in_the_title_does_not_pause() -> void:
+	var titled: Main = _make_titled_main()
+	titled.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	assert_false(get_tree().paused)

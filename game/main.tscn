@@ -81,6 +81,7 @@ process_mode = 3
 script = ExtResource("21_audio")
 
 [node name="DropController" type="Node" parent="."]
+process_mode = 3
 script = ExtResource("6_controller")
 
 [node name="DebugController" type="Node" parent="."]

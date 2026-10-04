@@ -16,6 +16,7 @@ func _to_playing() -> void:
 
 
 func test_initial_status_is_ready() -> void:
+	assert_true(_state.is_ready())
 	assert_eq(_state.get_status(), GameState.Status.READY)
 	assert_false(_state.is_playing())
 	assert_false(_state.is_finished())

@@ -16,6 +16,7 @@ func before_each() -> void:
 	_main = (load("res://game/main.tscn") as PackedScene).instantiate() as Main
 	_main.config = _config
 	_main.records_path = ""
+	_main.show_title = false
 	add_child_autofree(_main)
 
 

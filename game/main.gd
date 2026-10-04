@@ -11,6 +11,8 @@ const DEBUG_OVERLAY_INTERVAL: float = 0.25
 @export var config: GameConfig = preload("res://game/game_config.tres")
 ## Presets que F1–F3 activan. Solo se usan en builds de depuración.
 @export var debug_strategies: Array[SpawnStrategy] = []
+## `false` en los tests: la partida arranca sin pantalla de título.
+@export var show_title: bool = true
 ## Ruta del récord. Vacía → récord solo en memoria (la usan los tests).
 @export var records_path: String = "user://records.cfg"
 ## Sonidos de la partida (todos opcionales).
@@ -46,7 +48,7 @@ func _ready() -> void:
 			push_error(error)
 		return
 	_compose()
-	_start_new_game()
+	_start_new_game(show_title)
 
 
 # Getters de solo lectura para los tests de integración; el juego no los usa.
@@ -110,7 +112,10 @@ func _compose() -> void:
 	_ui.setup(_state, config.piece_catalog, _scores)
 	_drop_controller.aim_requested.connect(_drop_system.request_aim_global)
 	_drop_controller.aim_step_requested.connect(_drop_system.request_aim_step)
-	_drop_controller.drop_requested.connect(_drop_system.request_drop)
+	_drop_controller.drop_requested.connect(_on_drop_requested)
+	_drop_controller.pause_requested.connect(_on_pause_requested)
+	_ui.start_requested.connect(_on_start_requested)
+	_ui.resume_requested.connect(_on_resume_requested)
 	_spawner.piece_spawned.connect(_merge_system.register_piece)
 	_state.status_changed.connect(_on_state_status_changed)
 	_ui.restart_requested.connect(_on_restart_requested)
@@ -126,8 +131,8 @@ func _compose() -> void:
 	add_child(_debug_timer)
 
 
-# Orden de `02` §8.5. El primer arranque usa la misma función.
-func _start_new_game() -> void:
+# Orden de `02` §8. `with_title` deja la partida en `READY` (pantalla de título).
+func _start_new_game(with_title: bool) -> void:
 	_merge_system.reset()
 	_danger_system.reset()
 	_board.clear_pieces()
@@ -135,7 +140,8 @@ func _start_new_game() -> void:
 	_state.reset()
 	_drop_system.reset()
 	_board.set_frozen(false)
-	_state.start()
+	if not with_title:
+		_state.start()
 
 
 # Con `stretch/aspect = "expand"` el ancho visible cambia con la ventana.
@@ -145,16 +151,58 @@ func _update_world_position() -> void:
 
 
 # La regla de "terminada" vive en `GameState`; aquí se congela el tablero y se registra el récord.
+# Con la partida en `READY`, el clic que empieza no suelta una pieza. Las
+# señales llaman a los métodos aunque el nodo esté pausado: la guarda cuenta aquí.
+func _on_drop_requested() -> void:
+	if get_tree().paused:
+		return
+	if _state.is_ready():
+		_state.start()
+	else:
+		_drop_system.request_drop()
+
+
+func _on_start_requested() -> void:
+	_state.start()
+
+
+func _on_pause_requested() -> void:
+	if get_tree().paused:
+		_set_paused(false)
+	elif _state.is_playing():
+		_set_paused(true)
+
+
+func _on_resume_requested() -> void:
+	if get_tree().paused:
+		_set_paused(false)
+
+
+# Nadie más consulta el árbol: la UI y el audio se avisan desde aquí.
+func _set_paused(paused: bool) -> void:
+	get_tree().paused = paused
+	_ui.set_paused(paused)
+	_audio_director.set_paused(paused)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and _state != null \
+			and _state.is_playing() and not get_tree().paused:
+		_set_paused(true)
+
+
 func _on_state_status_changed(_status: GameState.Status) -> void:
 	_board.set_frozen(_state.is_finished())
 	if _state.is_finished():
 		_scores.submit(_state.get_score())
 
 
-# Solo se reinicia una partida terminada (la consulta vive en `GameState`).
+# Se reinicia una partida terminada o en pausa (la consulta vive en `GameState`).
 func _on_restart_requested() -> void:
-	if _state.is_finished():
-		_start_new_game()
+	if _state.is_finished() or get_tree().paused:
+		if get_tree().paused:
+			_set_paused(false)
+		_start_new_game(false)
 
 
 # Depuración: cambiar de estrategia reinicia la partida aunque esté en curso.
@@ -163,7 +211,7 @@ func _on_debug_strategy_requested(index: int) -> void:
 		return
 	var strategy: SpawnStrategy = debug_strategies[index]
 	_generator.set_strategy(strategy)
-	_start_new_game()
+	_start_new_game(false)
 	_debug_strategy_name = strategy.resource_path.get_file().get_basename()
 	_ui.set_debug_text("Estrategia: %s" % _debug_strategy_name)
 

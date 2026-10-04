@@ -68,6 +68,7 @@ jugador puede seguir apuntando.
 | `drop`            | clic izquierdo, `Espacio`     | Suelta el material actual                |
 | `restart`         | `R`                           | Reinicia (solo en Game Over o Victoria)  |
 | `toggle_mute`     | `M`                           | Silencia o restaura todo el sonido       |
+| `pause`           | `Esc`, `P`                    | Pausa o reanuda (solo en `PLAYING`)      |
 
 - El jugador solo elige la posición **horizontal**. La vertical es fija
   (`spawn_y`).
@@ -242,7 +243,8 @@ Al entrar en `GAME_OVER` o en `VICTORY`:
 
 ## 14. Reinicio
 
-Disponible desde `GAME_OVER` y `VICTORY` (botón o tecla `R`):
+Disponible desde `GAME_OVER` y `VICTORY` (botón o tecla `R`) y desde la
+pausa (botón "Reiniciar partida"; la tecla `R` no actúa en pausa):
 
 1. se cancelan las fusiones pendientes y los contadores de peligro;
 2. se eliminan todas las piezas;
@@ -274,8 +276,15 @@ partida anterior puede aparecer en la nueva.
 | `GAME_OVER` | No     | No       | Congelada  |
 | `VICTORY`   | No     | No       | Congelada  |
 
-`READY` es transitorio: dura desde que se crea o reinicia la partida hasta que
-`Main` llama a `start()`. Queda disponible para una futura pantalla de título.
+`READY` es el estado de la **pantalla de título**: dura desde que se crea la
+partida hasta que el jugador pulsa "Empezar" o hace clic o `Espacio`, y `Main`
+llama a `start()`. El clic que empieza **no** suelta una pieza. Los reinicios,
+la depuración y los tests no pasan por el título: `READY` dura un instante.
+
+La **pausa** no es un estado de la partida: es `get_tree().paused`. Solo se
+puede pausar en `PLAYING`, también al perder el foco la ventana. Pausada, la
+física y los temporizadores se detienen y el jugador no puede apuntar ni
+soltar. `Esc`/`P` o "Continuar" la quitan.
 
 ---
 

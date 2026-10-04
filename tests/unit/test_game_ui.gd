@@ -133,3 +133,36 @@ func test_new_record_label_survives_the_victory_delay() -> void:
 	var view: Control = ui.get_node("Root/VictoryView") as Control
 	assert_true(await wait_until(func() -> bool: return view.visible, 2.0))
 	assert_true((ui.get_node("Root/VictoryView/VBox/NewRecord") as Label).visible)
+
+
+func test_title_view_shows_only_while_ready() -> void:
+	var title: Control = _node("Root/TitleView") as Control
+	assert_false(title.visible, "en PLAYING no se ve")
+	_state.reset()
+	assert_true(title.visible, "en READY se ve")
+	_state.start()
+	assert_false(title.visible)
+
+
+func test_pause_view_follows_set_paused() -> void:
+	var pause: Control = _node("Root/PauseView") as Control
+	assert_false(pause.visible)
+	_ui.set_paused(true)
+	assert_true(pause.visible)
+	_ui.set_paused(false)
+	assert_false(pause.visible)
+
+
+func test_start_resume_and_pause_restart_buttons_emit_their_signals() -> void:
+	watch_signals(_ui)
+	(_node("Root/TitleView/VBox/StartButton") as Button).pressed.emit()
+	(_node("Root/PauseView/VBox/ResumeButton") as Button).pressed.emit()
+	(_node("Root/PauseView/VBox/RestartButton") as Button).pressed.emit()
+	assert_signal_emit_count(_ui, "start_requested", 1)
+	assert_signal_emit_count(_ui, "resume_requested", 1)
+	assert_signal_emit_count(_ui, "restart_requested", 1)
+	assert_signal_emit_count(_ui, "button_pressed", 3)
+
+
+func test_ui_keeps_processing_while_paused() -> void:
+	assert_eq(_ui.process_mode, Node.PROCESS_MODE_ALWAYS)

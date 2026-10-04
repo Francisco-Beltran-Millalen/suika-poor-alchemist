@@ -99,7 +99,7 @@ Cada `PieceData.texture` apunta a `assets/sprites/pieces/<id>.png`
   trae una luz muy marcada que no debe girar. Sin textura, el placeholder
   siempre se mantiene derecho.
 - **Reducción.** La leyenda (24 px) y la vista previa reducen los sprites de
-  512 px; por eso las texturas se importan con mipmaps (§6).
+  512 px; por eso las texturas se importan con mipmaps (§7).
 
 ---
 
@@ -127,7 +127,29 @@ Hay dos buses bajo `Master` (`default_bus_layout.tres`): `Music` y `SFX`.
 
 ---
 
-## 6. Assets y placeholders
+## 6. Pantallas
+
+Todas son vistas de `GameUI` (que procesa también en pausa) y se muestran
+según el estado; ninguna modifica la simulación, solo emite intenciones.
+
+| Pantalla | Cuándo | Contenido | Intención que emite |
+| -------- | ------ | --------- | ------------------- |
+| HUD | Siempre | Puntuación, récord, PRÓXIMO, leyenda de rareza | — |
+| Título | Estado `READY` | Nombre, subtítulo "De la basura a la Piedra Filosofal", "Clic o Espacio para empezar", botón Empezar | `start_requested` (o `drop_requested`, que `Main` convierte en `start()` sin soltar) |
+| Pausa | `get_tree().paused` | "Continuar" y "Reiniciar partida" | `resume_requested`, `restart_requested` |
+| Game Over | `GAME_OVER` | Puntuación final, "¡Nuevo récord!" si lo hay, Reiniciar | `restart_requested` |
+| Victoria | `VICTORY`, tras 1,5 s | Igual que Game Over | `restart_requested` |
+
+- **Récord.** `ScoreStore` guarda el mejor en `user://records.cfg`. `Main`
+  envía la puntuación al terminar la partida; `GameUI` muestra "Récord: N" en
+  el HUD y "¡Nuevo récord!" en las vistas de fin (también en la de victoria,
+  que aparece con retardo).
+- **Pausa.** `Main` pausa solo en `PLAYING`, y avisa a `GameUI` y
+  `AudioDirector`. Pausada, `DropController` solo emite `pause_requested`.
+
+---
+
+## 7. Assets y placeholders
 
 Cada asset del Anexo A de `06_plan_iteracion_2.md` existe como **placeholder**
 con su ruta, nombre, tamaño y formato definitivos. La fuente única de rutas y
@@ -147,7 +169,7 @@ godot --headless -s tools/generate_placeholders.gd -- --force
 por defecto en las texturas: los sprites de 512 px se reducen a 24 px en la
 leyenda y sin mipmaps se verían con dientes.
 
-### 6.1. Procedimiento de integración de un asset definitivo
+### 7.1. Procedimiento de integración de un asset definitivo
 
 1. Exportar el archivo con **el mismo nombre, ruta, tamaño y formato** que su
    placeholder y sobrescribirlo.
@@ -155,7 +177,7 @@ leyenda y sin mipmaps se verían con dientes.
 3. Ejecutar la suite: `test_asset_spec.gd` falla si el tamaño o el formato no
    coinciden.
 4. Revisar en el juego (`F4` carga una pieza de nivel alto) y marcarlo como
-   "definitivo" en la tabla de §6.3.
+   "definitivo" en la tabla de §7.3.
 
 Excepciones, que requieren cambiar **una línea**:
 
@@ -170,7 +192,7 @@ Los bucles de audio no se escriben en el WAV: están en el `.import`
 (`edit/loop_mode=2`) de `sfx_danger_loop.wav` y `bgm_workshop.wav`, y se
 conservan al sustituir el archivo.
 
-### 6.2. Plantillas del artista (`docs/plantillas/`)
+### 7.2. Plantillas del artista (`docs/plantillas/`)
 
 Una imagen por tamaño, sin texto. Leyenda de colores:
 
@@ -181,7 +203,7 @@ Una imagen por tamaño, sin texto. Leyenda de colores:
 | Gris claro (material) | Interior del cuerpo; el gris oscuro exterior es el margen para adornos |
 | Rojo / azul (pergamino) | Esquinas de 32 px que no se deforman / centro que se estira |
 
-### 6.3. Estado de assets
+### 7.3. Estado de assets
 
 | Archivo | Estado |
 | ------- | ------ |

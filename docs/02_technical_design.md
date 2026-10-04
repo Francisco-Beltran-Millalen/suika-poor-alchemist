@@ -220,6 +220,8 @@ DropController.aim_requested(global_x)        ─▶ DropSystem.request_aim_glob
 DropController.aim_step_requested(dir, delta) ─▶ DropSystem.request_aim_step
 DropController.drop_requested()               ─▶ DropSystem.request_drop
 DropController.restart_requested()            ─▶ Main._on_restart_requested
+DropController.pause_requested()              ─▶ Main (pausa o reanuda)
+GameUI.start_requested() / resume_requested() ─▶ Main
 DropController.mute_requested()               ─▶ AudioDirector.toggle_mute
 GameUI.button_pressed()                       ─▶ AudioDirector.play_ui_click
 DebugController.strategy_requested(i)         ─▶ Main (cambia estrategia y reinicia)
@@ -285,10 +287,12 @@ Las reglas están en `04_gameplay_design.md`; aquí solo el *quién llama a qui�
   `danger_line_y` y todo el ancho.
 - **Fin de partida:** `status_changed(GAME_OVER | VICTORY)` → `Main` congela el
   tablero y `GameUI` muestra la vista. Los sistemas consultan `is_playing()`.
-- **Reinicio** (solo si `GameState.is_finished()`), en `Main._start_new_game()`:
+- **Reinicio** (si `GameState.is_finished()` o el árbol está pausado), en
+  `Main._start_new_game(with_title)`:
   `MergeSystem.reset()`, `DangerSystem.reset()`, `Board.clear_pieces()`,
   `PieceGenerator.reset()`, `GameState.reset()`, `DropSystem.reset()`,
-  descongelar y `GameState.start()`. El primer arranque usa la misma función.
+  descongelar y `GameState.start()` (salvo `with_title`, que deja `READY`). El
+  primer arranque usa la misma función.
 
 ---
 

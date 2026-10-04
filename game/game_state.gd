@@ -35,6 +35,11 @@ func get_next_piece() -> PieceData:
 	return _next_piece
 
 
+## `READY`: la partida espera a empezar (pantalla de título).
+func is_ready() -> bool:
+	return _status == Status.READY
+
+
 func is_playing() -> bool:
 	return _status == Status.PLAYING
 
