@@ -1013,3 +1013,9 @@ con su motivo y la fase en que ocurrió.)*
 5. **Fase 5 — línea guía que se detiene (paso 6, opcional).** No se
    implementa: el plan la condiciona a que "quede claro al jugar" y requiere
    partidas humanas.
+6. **Fase 8 — respaldo del pergamino.** Un tema solo admite un `StyleBox` por
+   nombre, así que el respaldo plano vive en el mismo tema como `panel_fallback`
+   y `GameUI.apply_panel_fallback(theme)` (estática, API pública nueva) lo
+   activa si el pergamino no tiene textura. Además, la etiqueta de rareza es
+   una "píldora" (`PanelContainer` + `Label`) y el panel derecho se ensancha
+   40 px para que quepa en una línea.

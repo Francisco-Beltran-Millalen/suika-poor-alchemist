@@ -16,3 +16,4 @@ score_value = 15
 color = Color(0.94902, 0.713725, 0.188235, 1)
 texture = ExtResource("9_tex")
 glow_strength = 0.3
+rarity_color = Color(0.776471, 0.321569, 0.882353, 1)

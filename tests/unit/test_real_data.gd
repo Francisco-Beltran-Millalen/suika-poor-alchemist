@@ -92,3 +92,27 @@ func test_sound_set_has_every_field_assigned() -> void:
 		checked += 1
 		assert_not_null(sounds.get(property["name"] as String), "%s asignado" % property["name"])
 	assert_eq(checked, 8, "se comprueban los 8 sonidos")
+
+
+func test_every_material_has_a_visible_rarity_color() -> void:
+	for piece: PieceData in _catalog.pieces:
+		assert_gt(piece.rarity_color.a, 0.0, "rarity_color de %s" % piece.id)
+
+
+func test_rarity_colors_are_distinct_for_distinct_rarities() -> void:
+	var by_rarity: Dictionary = {}
+	for piece: PieceData in _catalog.pieces:
+		by_rarity[piece.rarity_label] = piece.rarity_color
+	var seen: Array[Color] = []
+	for color: Color in by_rarity.values():
+		assert_false(seen.has(color), "color repetido: %s" % color)
+		seen.append(color)
+
+
+func test_ui_theme_has_parchment_panel_and_flat_fallback() -> void:
+	var theme := load("res://ui/theme.tres") as Theme
+	var panel := theme.get_stylebox(&"panel", &"PanelContainer") as StyleBoxTexture
+	assert_not_null(panel)
+	assert_eq(panel.texture.resource_path, "res://assets/ui/parchment_panel.png")
+	assert_eq(panel.texture_margin_left, 32.0)
+	assert_true(theme.get_stylebox(&"panel_fallback", &"PanelContainer") is StyleBoxFlat)

@@ -50,6 +50,7 @@ piezas de Cobre comparten el mismo `copper.tres`.
 | Presentation      | `color`         | `Color`       | Color base del placeholder y del tinte                      |
 | Presentation      | `texture`       | `Texture2D`   | Opcional, **cuadrada** (la valida el catálogo). `null` → círculo con `color` |
 | Presentation      | `glow_strength` | `float`       | 0.0–1.0. Intensidad del brillo (comunica rareza)            |
+| Presentation      | `rarity_color`  | `Color`       | Color de la etiqueta de rareza en la leyenda (alfa > 0)     |
 
 **Decisiones:**
 
@@ -87,6 +88,9 @@ Ocho niveles, tomados de la referencia visual
 | 6     | `enchanted_gold`    | Oro encantado       | Épico          | 56       | 21            | `#ffd36b` | 0.5             |
 | 7     | `celestial_matter`  | Material celestial  | Épico+         | 68       | 28            | `#7b6cff` | 0.75            |
 | 8     | `philosopher_stone` | Piedra Filosofal    | Legendario     | 82       | 36            | `#e8323c` | 1.0             |
+
+`rarity_color` (de la imagen de referencia): `#8c7970`, `#816b5f`, `#6c9c48`,
+`#4594f7`, `#c652e1`, `#cc3efa`, `#fdb227`, `#fdd858` (niveles 1 a 8).
 
 Encadenamiento: `trash → scrap_metal → … → philosopher_stone → null`.
 

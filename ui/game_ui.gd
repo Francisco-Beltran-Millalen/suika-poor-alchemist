@@ -12,6 +12,13 @@ signal resume_requested
 ## Botón de la vista de título.
 signal start_requested
 
+const _CHIP_FONT_SIZE: int = 12
+const _CHIP_CORNER_RADIUS: int = 4
+const _CHIP_DARK_TEXT := Color(0.15, 0.1, 0.05)
+const _CHIP_LIGHT_TEXT := Color.WHITE
+## Por encima de esta luminancia, el texto de la etiqueta de rareza es oscuro.
+const _CHIP_LIGHT_BACKGROUND: float = 0.55
+
 ## Segundos hasta mostrar la pantalla de victoria (deja ver la animación).
 @export var victory_view_delay: float = 1.5
 
@@ -37,6 +44,7 @@ var _is_new_record: bool = false
 
 
 func _ready() -> void:
+	apply_panel_fallback(($Root as Control).theme)
 	($Root/GameOverView/VBox/RestartButton as Button).pressed.connect(_on_restart_button_pressed)
 	($Root/VictoryView/VBox/RestartButton as Button).pressed.connect(_on_restart_button_pressed)
 	($Root/TitleView/VBox/StartButton as Button).pressed.connect(_on_start_button_pressed)
@@ -60,6 +68,18 @@ func setup(state: GameState, catalog: PieceCatalog, scores: ScoreStore = null) -
 	_on_state_score_changed(state.get_score())
 	_on_state_next_piece_changed(state.get_next_piece())
 	_on_state_status_changed(state.get_status())
+
+
+## Si el pergamino del tema no tiene textura, usa el panel plano de respaldo
+## (`panel_fallback`, del mismo tema). Así quitar el PNG nunca rompe la interfaz.
+static func apply_panel_fallback(theme: Theme) -> void:
+	if theme == null or not theme.has_stylebox(&"panel", &"PanelContainer") \
+			or not theme.has_stylebox(&"panel_fallback", &"PanelContainer"):
+		return
+	var panel := theme.get_stylebox(&"panel", &"PanelContainer") as StyleBoxTexture
+	if panel != null and panel.texture == null:
+		theme.set_stylebox(&"panel", &"PanelContainer",
+				theme.get_stylebox(&"panel_fallback", &"PanelContainer"))
 
 
 ## Muestra u oculta la vista de pausa.
@@ -86,11 +106,35 @@ func _build_legend(catalog: PieceCatalog) -> void:
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		icon.set_piece(data)
 		var label := Label.new()
-		label.text = "%s · %s" % [data.display_name, data.rarity_label]
+		label.text = data.display_name
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(icon)
 		row.add_child(label)
+		row.add_child(_make_rarity_chip(data))
 		_legend.add_child(row)
+
+
+# Etiqueta de rareza como en la referencia: píldora del color de `rarity_color`.
+func _make_rarity_chip(data: PieceData) -> PanelContainer:
+	var chip := PanelContainer.new()
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var style := StyleBoxFlat.new()
+	style.bg_color = data.rarity_color
+	style.set_corner_radius_all(_CHIP_CORNER_RADIUS)
+	style.content_margin_left = 6.0
+	style.content_margin_right = 6.0
+	style.content_margin_top = 1.0
+	style.content_margin_bottom = 1.0
+	chip.add_theme_stylebox_override("panel", style)
+	var text := Label.new()
+	text.text = data.rarity_label
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text.add_theme_font_size_override("font_size", _CHIP_FONT_SIZE)
+	var dark: bool = data.rarity_color.get_luminance() > _CHIP_LIGHT_BACKGROUND
+	text.add_theme_color_override("font_color", _CHIP_DARK_TEXT if dark else _CHIP_LIGHT_TEXT)
+	chip.add_child(text)
+	return chip
 
 
 func _show_end_view(view: Control) -> void:

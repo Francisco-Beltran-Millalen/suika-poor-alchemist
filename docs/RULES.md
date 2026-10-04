@@ -92,7 +92,7 @@ res://
 ├── ui/                              # Presentación, input y efectos
 │   ├── drop_controller.gd / drop_preview.gd / effects_layer.gd / piece_icon.gd
 │   ├── debug_controller.gd / screen_shake.gd
-│   ├── audio_director.gd / sound_set.gd / sound_set.tres
+│   ├── audio_director.gd / sound_set.gd / sound_set.tres / theme.tres
 │   └── game_ui.tscn / game_ui.gd
 ├── tools/                           # Scripts de línea de comandos (balance_sim.gd)
 ├── default_bus_layout.tres          # Buses de audio (Music, SFX)

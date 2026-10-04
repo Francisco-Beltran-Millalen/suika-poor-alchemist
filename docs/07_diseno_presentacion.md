@@ -140,6 +140,16 @@ según el estado; ninguna modifica la simulación, solo emite intenciones.
 | Game Over | `GAME_OVER` | Puntuación final, "¡Nuevo récord!" si lo hay, Reiniciar | `restart_requested` |
 | Victoria | `VICTORY`, tras 1,5 s | Igual que Game Over | `restart_requested` |
 
+- **Tema (`ui/theme.tres`)**, aplicado a `GameUI/Root`. Los paneles de título,
+  pausa y fin usan un `StyleBoxTexture` de pergamino (`parchment_panel.png`,
+  9-slice con márgenes de 32 px). Las vistas no llevan estilos locales: un
+  override local ganaría al tema. Si la textura es `null`,
+  `GameUI.apply_panel_fallback` pone el panel plano `panel_fallback` del
+  mismo tema. Las etiquetas sobre pergamino usan la variación `ParchmentLabel`
+  (marrón oscuro) y `RecordLabel` (rojo oscuro). La fuente del Anexo A.3 se
+  asignará en el tema (`default_font`) cuando exista.
+- **Leyenda de rareza.** Una fila por material: icono, nombre y una etiqueta
+  con el `rarity_color` del material (texto oscuro o claro según contraste).
 - **Récord.** `ScoreStore` guarda el mejor en `user://records.cfg`. `Main`
   envía la puntuación al terminar la partida; `GameUI` muestra "Récord: N" en
   el HUD y "¡Nuevo récord!" en las vistas de fin (también en la de victoria,

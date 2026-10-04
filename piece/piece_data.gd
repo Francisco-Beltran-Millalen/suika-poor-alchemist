@@ -31,6 +31,8 @@ extends Resource
 ## Opcional, cuadrada (lienzo con el cuerpo al 80 %). Si es `null` se dibuja un círculo con `color`.
 @export var texture: Texture2D
 @export_range(0.0, 1.0) var glow_strength: float = 0.0
+## Color de la etiqueta de rareza en la leyenda (alfa > 0).
+@export var rarity_color: Color = Color.WHITE
 
 
 ## Indica si es el último nivel de la cadena.

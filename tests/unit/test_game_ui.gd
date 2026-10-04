@@ -166,3 +166,55 @@ func test_start_resume_and_pause_restart_buttons_emit_their_signals() -> void:
 
 func test_ui_keeps_processing_while_paused() -> void:
 	assert_eq(_ui.process_mode, Node.PROCESS_MODE_ALWAYS)
+
+
+func test_legend_rows_have_a_colored_rarity_chip() -> void:
+	var legend: VBoxContainer = _node("Root/RightPanel/Legend") as VBoxContainer
+	for i: int in _catalog.size():
+		var data: PieceData = _catalog.get_by_level(i + 1)
+		var chip: PanelContainer = legend.get_child(i).get_child(2) as PanelContainer
+		var style: StyleBoxFlat = chip.get_theme_stylebox("panel") as StyleBoxFlat
+		assert_eq(style.bg_color, data.rarity_color, "color de la etiqueta de %s" % data.id)
+		assert_eq((chip.get_child(0) as Label).text, data.rarity_label)
+
+
+func test_legend_chip_text_contrasts_with_its_background() -> void:
+	var catalog: PieceCatalog = DataFactory.make_catalog()
+	catalog.get_by_level(1).rarity_color = Color(1.0, 0.9, 0.4)
+	catalog.get_by_level(2).rarity_color = Color(0.1, 0.1, 0.4)
+	var ui := (load("res://ui/game_ui.tscn") as PackedScene).instantiate() as GameUI
+	add_child_autofree(ui)
+	ui.setup(GameState.new(), catalog)
+	var legend: VBoxContainer = ui.get_node("Root/RightPanel/Legend") as VBoxContainer
+	var on_light: Label = legend.get_child(0).get_child(2).get_child(0) as Label
+	var on_dark: Label = legend.get_child(1).get_child(2).get_child(0) as Label
+	assert_lt(on_light.get_theme_color("font_color").get_luminance(),
+			on_dark.get_theme_color("font_color").get_luminance(), "texto oscuro sobre fondo claro")
+
+
+func test_root_uses_the_ui_theme_and_views_have_no_local_panel_override() -> void:
+	assert_eq((_node("Root") as Control).theme.resource_path, "res://ui/theme.tres")
+	for view: String in ["GameOverView", "VictoryView", "TitleView", "PauseView"]:
+		assert_false((_node("Root/%s" % view) as Control).has_theme_stylebox_override("panel"),
+				"%s no debe anular el panel del tema" % view)
+
+
+func test_panel_fallback_replaces_a_textureless_parchment() -> void:
+	var theme := Theme.new()
+	theme.set_stylebox(&"panel", &"PanelContainer", StyleBoxTexture.new())
+	var flat := StyleBoxFlat.new()
+	theme.set_stylebox(&"panel_fallback", &"PanelContainer", flat)
+	GameUI.apply_panel_fallback(theme)
+	assert_same(theme.get_stylebox(&"panel", &"PanelContainer"), flat)
+
+
+func test_panel_fallback_keeps_a_textured_parchment() -> void:
+	var theme := Theme.new()
+	var parchment := StyleBoxTexture.new()
+	parchment.texture = ImageTexture.create_from_image(Image.create(8, 8, false, Image.FORMAT_RGBA8))
+	theme.set_stylebox(&"panel", &"PanelContainer", parchment)
+	theme.set_stylebox(&"panel_fallback", &"PanelContainer", StyleBoxFlat.new())
+	GameUI.apply_panel_fallback(theme)
+	assert_same(theme.get_stylebox(&"panel", &"PanelContainer"), parchment)
+	GameUI.apply_panel_fallback(null)
+	assert_true(true, "un tema nulo no falla")
