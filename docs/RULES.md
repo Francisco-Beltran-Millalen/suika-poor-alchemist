@@ -99,7 +99,7 @@ res://
 │   ├── integration/
 │   └── helpers/                     # Datos de test y stubs (sin class_name)
 ├── addons/                          # Dependencias de terceros (addons/gut/)
-├── docs/                            # Documentación y GDDs (.gdignore)
+├── docs/                            # Documentación y GDDs (.gdignore); plantillas/ guías del artista
 └── project.godot
 ```
 

@@ -12,6 +12,9 @@ Documentos canónicos de diseño en `docs/`:
 - `docs/03_data_design.md` — Recursos, datos y parámetros configurables
 - `docs/04_gameplay_design.md` — Mecánicas de juego y resolución de fusiones
 - `docs/05_plan_implementacion.md` — Plan de implementación paso a paso (guía temporal, no diseño canónico)
+- `docs/06_plan_iteracion_2.md` — Plan de la iteración 2 (guía temporal, no diseño canónico)
+- `docs/07_diseno_presentacion.md` — Arte, escenario, efectos, audio, pantallas y procedimiento de assets
+- `docs/notas_playtest.md` — Simulación de balance y notas de partidas
 - `docs/el_alquimista_pobre_concepto.md` — Fantasía y progresión visual
 - `docs/RULES.md` — Convenciones de código y estilo obligatorio
 
@@ -96,7 +99,7 @@ res://
 │   ├── integration/
 │   └── helpers/                     # Datos de test y stubs (sin class_name)
 ├── addons/                          # Dependencias de terceros (addons/gut/)
-├── docs/                            # Documentación y GDDs (.gdignore)
+├── docs/                            # Documentación y GDDs (.gdignore); plantillas/ guías del artista
 └── project.godot
 ```
 
