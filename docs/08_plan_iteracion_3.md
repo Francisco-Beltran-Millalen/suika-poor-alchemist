@@ -53,6 +53,12 @@ logros, bonificación por cascada y estadísticas.
    3. una captura con Movie Maker si la fase cambia algo visible, revisada
       antes de hacer commit;
    4. commit con el mensaje indicado (español, con ámbito).
+9. **Nada fuera del proyecto.** No instales paquetes ni ejecutes programas
+   que escriban fuera del repositorio, `dist/` o un directorio temporal (wine,
+   navegadores, servidores web, emuladores…). Lo que requiera esas
+   herramientas (arrancar el `.exe`, probar en el navegador o en el móvil) es
+   una **comprobación manual del usuario**: déjala escrita como lista en `07`,
+   con "sin probar" en cada punto, y no la des por hecha.
 
 ### Comandos
 
@@ -78,7 +84,20 @@ usuario, rutas de assets, persistencia sin autoloads). Además:
 - **Plataforma inyectada:** solo `Main` consulta `OS.has_feature(...)` y
   `DisplayServer.is_touchscreen_available()`. Los demás componentes reciben
   *flags* (`allow_quit`, `allow_fullscreen`, `touch_hints`) para que los tests
-  puedan simular cualquier plataforma.
+  puedan simular cualquier plataforma. **Los *flags* se pasan con un método**
+  (`GameUI.set_platform`, `DisplayDirector.setup`), nunca solo como
+  `@export` leído en `_ready`: `Main` los calcula cuando `GameUI` ya está
+  lista, y un valor leído solo en `_ready` no tendría efecto en el juego
+  aunque los tests (que lo fijan antes de `add_child`) pasen.
+- **Vistas modales** (opciones, créditos): son un `Control` a **pantalla
+  completa** con `mouse_filter = STOP` que contiene el panel centrado. Un
+  `STOP` solo en el panel deja pasar los clics de fuera, que llegarían a
+  `DropController` (en `READY` empezarían la partida). Verificado: un
+  `Control` a pantalla completa con `STOP` consume el toque crudo y el clic
+  emulado.
+- **Ratón en los tests:** un `InputEventMouseButton.new()` trae
+  `device = InputEvent.DEVICE_ID_MOUSE` (32); el clic emulado desde un toque
+  trae `DEVICE_ID_EMULATION` (−1). Usa esas constantes, no números.
 - **Tests que instancian `main.tscn`:** además de `show_title = false` y
   `records_path = ""`, ponen `settings_path = ""` (fase 1) antes de
   `add_child`. Lo mismo en `tools/balance_sim.gd`.
@@ -110,38 +129,43 @@ usuario, rutas de assets, persistencia sin autoloads). Además:
    ```
 
    Se reproduce con `godot --path . --scene res://game/main.tscn --quit-after 60`
-   (con y sin Movie Maker). **Ya se ha comprobado** (no lo repitas):
+   (con y sin Movie Maker) y **también en el binario exportado** (Linux y
+   Windows). Lo comprobado hasta ahora:
    - sin `_music_player.play()` la fuga desaparece: la causa es la música;
-   - un script mínimo que reproduce el mismo `bgm_workshop.wav` en bucle en un
-     `AudioStreamPlayer` **no** tiene fuga: algo del proyecto retiene la
-     reproducción;
-   - **no** la arreglan: parar todos los reproductores en `_exit_tree` de
+   - **no** la arreglan: parar los reproductores en `_exit_tree` de
      `AudioDirector`, cambiar el bus de la música a `Master`, ni diferir el
-     `play()`.
+     `play()`;
+   - parar la música (o liberar el reproductor) **unos frames antes** de
+     `quit()` sí la evita; pararla en el mismo frame del `quit()`, no;
+   - resultado contradictorio: un script mínimo que reproduce
+     `bgm_workshop.wav` y sale con `--quit-after 60` dio fuga en un proyecto
+     nuevo y vacío, pero **no** dentro de este proyecto. No está claro si es
+     del motor o del proyecto.
 
-   Cómo seguir: biseca sobre una copia temporal de `main.tscn` (fuera del
-   repo, o borrada antes del commit) quitando nodos (`GameUI`, `EffectsLayer`,
-   `ScreenShake`, `DebugController`…) y desconectando señales de
-   `AudioDirector` (`set_paused`, `_apply_music_volume`) hasta que desaparezca;
-   `--verbose` muestra el detalle. Pistas: el `volume_db` que se cambia en
-   caliente, `stream_paused`, el `Music` del `default_bus_layout.tres`.
-   **Máximo una hora.** Si encuentras la causa en el proyecto, corrígela y
-   añade el comando de arriba como comprobación manual del cierre en `07` §5.
-   Si resulta ser un fallo del motor, deja un script mínimo que lo reproduzca
-   en `docs/notas_motor.md` (nuevo; corto) y anótalo en "Desviaciones". No
-   añadas *workarounds* opacos.
+   Cómo seguir (**máximo una hora**): repite la reproducción mínima en ambos
+   sitios para aclarar la contradicción (`--verbose` da el detalle).
+   - Si es del motor: deja el script mínimo en `docs/notas_motor.md` (nuevo;
+     corto) y anótalo en "Desviaciones". La salida limpia del juego se
+     resuelve en la fase 2 (paso 3): "Salir" para la música y sale unos
+     frames después.
+   - Si es del proyecto: biseca sobre una copia temporal de `main.tscn`
+     (fuera del repo, o borrada antes del commit) quitando nodos y
+     desconectando señales de `AudioDirector` hasta que desaparezca, y
+     corrígela.
+   No añadas *workarounds* opacos. Añade el comando de arriba como
+   comprobación del cierre en `07` §5.
 3. **Huérfanos en los tests.** GUT informa de nodos huérfanos en
    `test_piece_spawner`, `test_merge_system`, `test_board`,
    `test_danger_integration` y `test_session_integration`. Vienen del patrón
    `remove_child` + `queue_free` (regla de `02` §9: el recuento debe ser
    correcto en el mismo frame), y GUT cuenta los nodos antes de que termine el
    frame. **No cambies el patrón del código de juego.**
-   - Primero comprueba cuándo cuenta GUT los huérfanos (después del test o
-     después de `after_each`). Si es después de `after_each`, añade
-     `await wait_process_frames(1)` al final de `after_each` en esos archivos
-     (o en un helper común si el patrón se repite).
-   - Si GUT cuenta antes de `after_each`, añade la espera al final de los tests
-     afectados.
+   - **Verificado:** GUT 9.6 cuenta los huérfanos después de `after_each` y
+     de liberar los `autofree` (`addons/gut/gut.gd`, ~l. 629–639), y
+     `await wait_process_frames(1)` al final de `after_each` los elimina en
+     `test_piece_spawner`, `test_merge_system` y `test_board`. Esos tres
+     archivos no tienen `after_each`: créalo. Aplica lo mismo a
+     `test_danger_integration` y `test_session_integration` (sin verificar).
    - Criterio: la suite completa no informa de ningún huérfano. Si alguno
      resulta ser una fuga real (un nodo que nunca se libera), corrígelo en el
      código y descríbelo en el commit.
@@ -173,7 +197,8 @@ extends RefCounted
 ## Ajustes del jugador persistidos con ConfigFile (`user://settings.cfg`).
 ## Sin autoload: lo crea Main. Mismo patrón que ScoreStore.
 
-## Se emite tras cualquier cambio (también los que no se guardan aún).
+## Se emite cuando un setter cambia el valor (no si es el mismo), también
+## antes de guardar.
 signal changed
 
 const DEFAULT_MUSIC_VOLUME: float = 0.8
@@ -206,22 +231,42 @@ extends Node
 ## Ventana y pantalla: pantalla completa (y, desde la fase 3, el diseño
 ## adaptable). No conoce la simulación.
 ## `allow_fullscreen` false → ignora la petición (web móvil, tests).
-func setup(allow_fullscreen: bool) -> void
+## `config` no se usa hasta la fase 3 (diseño adaptable); se recibe ya para no
+## cambiar la firma después.
+func setup(allow_fullscreen: bool, config: GameConfig) -> void
 ## Cambia el modo de ventana solo si difiere del actual.
 func apply_settings(settings: SettingsStore) -> void
 
-# ui/game_ui.gd (añadidos)
-signal options_opened
-## Intenciones de la vista de opciones (Main las traslada a SettingsStore).
+# ui/options_view.gd + ui/options_view.tscn (nuevo; escena propia para que
+# game_ui.gd no pase de 400 líneas)
+class_name OptionsView
+extends Control
+## Vista modal de opciones: Control a pantalla completa (STOP) con el panel
+## de pergamino centrado. Solo emite intenciones.
+signal music_volume_requested(volume: float)
+signal sfx_volume_requested(volume: float)
+signal muted_requested(muted: bool)
+signal fullscreen_requested(fullscreen: bool)
+## Se emite al soltar el slider de efectos (para oír el volumen nuevo).
+signal sfx_preview_requested
+signal closed
+## Sincroniza los controles con los ajustes SIN emitir señales
+## (`set_value_no_signal`, `set_pressed_no_signal`).
+func show_settings(settings: SettingsStore) -> void
+## Oculta la casilla de pantalla completa si es false.
+func set_allow_fullscreen(allow: bool) -> void
+
+# ui/game_ui.gd (añadidos; instancia OptionsView como `Root/OptionsView` y
+# reenvía sus señales con el mismo nombre)
 signal music_volume_requested(volume: float)
 signal sfx_volume_requested(volume: float)
 signal muted_requested(muted: bool)
 signal fullscreen_requested(fullscreen: bool)
 signal options_closed
-## Oculta la casilla de pantalla completa si es false.
-@export var allow_fullscreen: bool = true
-## Sincroniza los controles con los ajustes SIN emitir señales
-## (`set_value_no_signal`, `set_pressed_no_signal`).
+## Flags de plataforma; aplica la visibilidad al momento (ver Convenciones).
+## Las fases 2 y 4 usan `allow_quit` y `touch_hints`; en la fase 1 solo
+## `allow_fullscreen` tiene efecto.
+func set_platform(allow_quit: bool, allow_fullscreen: bool, touch_hints: bool) -> void
 func show_settings(settings: SettingsStore) -> void
 
 # ui/drop_controller.gd (añadido)
@@ -231,6 +276,7 @@ signal fullscreen_requested        # acción `toggle_fullscreen` (F11)
 ## Ruta de los ajustes. Vacía → solo en memoria (la usan los tests).
 @export var settings_path: String = "user://settings.cfg"
 func get_display_director() -> DisplayDirector
+func get_settings() -> SettingsStore
 ```
 
 ### Pasos
@@ -239,7 +285,8 @@ func get_display_director() -> DisplayDirector
    `sfx_volume`, `muted`, `fullscreen`. Un archivo ausente o corrupto, o un
    valor de tipo inesperado, equivale a los valores por defecto (nunca un
    error); copia el criterio de `ScoreStore._load`. Archivo propio
-   (`user://settings.cfg`), separado de los récords.
+   (`user://settings.cfg`), separado de los récords. Los setters emiten
+   `changed` solo si el valor cambia.
 2. **Audio.** `apply_settings` pone `AudioServer.set_bus_volume_db` de `Music` y
    `SFX` con `linear_to_db(volume)`, y `set_bus_mute(bus, volume <= 0.0)` (con 0,
    `linear_to_db` da `-inf`). El silencio va al bus `Master` (índice 0). La
@@ -252,21 +299,25 @@ func get_display_director() -> DisplayDirector
    `DisplayServer.window_set_mode(WINDOW_MODE_FULLSCREEN | WINDOW_MODE_WINDOWED)`
    solo si `allow_fullscreen` y el modo actual es distinto. Nueva acción
    `toggle_fullscreen` (F11) en el InputMap; `DropController` emite
-   `fullscreen_requested` (también en pausa, como el silencio).
-4. **Vista de opciones** (`Root/OptionsView`, `PanelContainer` con el
-   pergamino del tema, como las demás):
+   `fullscreen_requested` (también en pausa, como el silencio). Con
+   `allow_fullscreen` false, `Main` ignora F11 sin tocar el ajuste (no se
+   guarda `fullscreen = true` en una plataforma que no puede aplicarlo).
+4. **Vista de opciones** (`ui/options_view.tscn`, instanciada en `GameUI` como
+   `Root/OptionsView`; ver "Vistas modales" en las Convenciones):
+   - raíz `Control` a pantalla completa con `mouse_filter = STOP` y, centrado,
+     un `PanelContainer` con el pergamino del tema;
    - "Música" (`HSlider` 0–1, paso 0,05), "Efectos" (ídem), "Silencio"
-     (`CheckBox`), "Pantalla completa" (`CheckBox`, oculto si
-     `allow_fullscreen` es false) y "Volver";
+     (`CheckBox`), "Pantalla completa" (`CheckBox`, oculto si no se permite) y
+     "Volver";
    - se abre con un botón "Opciones" en la vista de título y en la de pausa;
      mientras está abierta, la vista que la abrió se oculta y al pulsar
      "Volver" reaparece;
-   - **`mouse_filter = STOP`** en `OptionsView`: con la partida en `READY`, un
-     clic en una zona vacía del panel no debe llegar a `DropController` y
-     empezar la partida (las demás vistas son `IGNORE` a propósito: el clic en
-     la de título sí empieza);
-   - al soltar el slider de efectos (`drag_ended`), suena el clic de la
-     interfaz para oír el volumen nuevo.
+   - **se cierra sola** (como si se pulsara "Volver", guardando) si cambia el
+     estado de la partida o se despausa con Esc/P: si no, quedaría abierta
+     sobre una partida en marcha y "Volver" mostraría una pausa que ya no
+     existe. `GameUI.set_paused(false)` y `_on_state_status_changed` la cierran;
+   - al soltar el slider de efectos (`drag_ended`), `sfx_preview_requested` →
+     `GameUI.button_pressed` → suena el clic de la interfaz.
 5. **Cableado en `Main`** (solo conexiones; nada de lógica):
    - `_settings = SettingsStore.new(settings_path)`; al componer, y en cada
      `_settings.changed`: `_audio_director.apply_settings(_settings)`,
@@ -279,11 +330,17 @@ func get_display_director() -> DisplayDirector
      completa;
    - `allow_fullscreen` = `not OS.has_feature("web") and not OS.has_feature("mobile")`
      por ahora (la fase 5 lo afina para web de escritorio). Se pasa a
-     `DisplayDirector.setup` y a `GameUI.allow_fullscreen`.
+     `DisplayDirector.setup(allow_fullscreen, config)` y a
+     `_ui.set_platform(true, allow_fullscreen, false)`;
+   - guarda también en `NOTIFICATION_WM_CLOSE_REQUEST` (cerrar la ventana con
+     la X sin pasar por "Volver").
 6. Documenta en `07` §5 (buses y ajustes del jugador frente a la atenuación del
-   juego) y §6 (vista de opciones), y en `04` §4 (F11). Añade `SettingsStore` y
-   `DisplayDirector` a la tabla de componentes de `02` §4 (una fila cada uno,
-   con una línea de descripción).
+   juego) y §6 (vista de opciones), y en `04` §4 (F11). En `02` (380 líneas,
+   muy justo): una fila por componente nuevo en la tabla de §4 (`SettingsStore`
+   en la capa **Sesión**, como `ScoreStore`, no en Simulación;
+   `DisplayDirector` y `OptionsView` en Presentación), y su nodo en el árbol de
+   §5. Las descripciones largas van en `07`. Si no cabe, compacta antes otra
+   sección de `02` sin perder contenido.
 
 ### Tests
 
@@ -291,17 +348,23 @@ func get_display_director() -> DisplayDirector
   `after_each`): valores por defecto; los setters acotan a [0, 1]; `save` y
   otra instancia con la misma ruta los lee; sin `save` no se escribe; archivo
   corrupto y tipo inesperado → valores por defecto; ruta vacía nunca toca el
-  disco; `changed` se emite en cada setter.
+  disco; `changed` se emite al cambiar un valor y no al repetir el mismo.
 - `test_audio_director.gd`: `apply_settings` pone el volumen de los buses
   `Music` y `SFX`; volumen 0 → bus en mute; `muted` → `Master` en mute.
   Restaura los buses en `after_each`.
+- `test_options_view.gd` (nuevo): mover un slider emite su señal;
+  `show_settings` actualiza los controles **sin** emitir señales;
+  `set_allow_fullscreen(false)` oculta la casilla; la raíz cubre toda la
+  pantalla y su `mouse_filter` es `STOP`.
 - `test_game_ui.gd`: "Opciones" desde título y desde pausa abre la vista y
-  oculta la de origen; "Volver" emite `options_closed` y la restaura; mover un
-  slider emite su señal; `show_settings` actualiza los controles **sin**
-  emitir señales; con `allow_fullscreen = false` la casilla no se ve;
-  `OptionsView.mouse_filter == MOUSE_FILTER_STOP`.
+  oculta la de origen; "Volver" emite `options_closed` y la restaura;
+  `set_paused(false)` y un cambio de estado la cierran; `set_platform`
+  aplicado **después** de `setup` cambia la visibilidad.
 - `test_session_integration.gd`: `mute_requested` alterna
-  `SettingsStore.is_muted()` y el mute del bus `Master`, también en pausa.
+  `get_settings().is_muted()` y el mute del bus `Master`, también en pausa;
+  en `READY` con Opciones abierta, un clic fuera del panel no empieza la
+  partida (envía el evento con `Input.parse_input_event` o
+  `get_viewport().push_input` para que pase por la GUI).
 
 **Commit:** `feat(opciones): volumen de música y efectos, silencio y pantalla completa persistentes`
 
@@ -312,11 +375,17 @@ func get_display_director() -> DisplayDirector
 ### Contrato
 
 ```gdscript
-# ui/game_ui.gd (añadidos)
+# ui/credits_view.gd + ui/credits_view.tscn (nuevo; misma estructura modal
+# que OptionsView)
+class_name CreditsView
+extends Control
+signal closed
+func set_version(version: String) -> void
+
+# ui/game_ui.gd (añadidos; `allow_quit` llega por `set_platform`)
 signal quit_requested
-## Oculta los botones "Salir" (web).
-@export var allow_quit: bool = true
-## Texto de versión (`application/config/version`), en la vista de título.
+## Texto de versión (`application/config/version`), en la vista de título y
+## en los créditos.
 func set_version(version: String) -> void
 ```
 
@@ -327,10 +396,13 @@ func set_version(version: String) -> void
    la vista de título la muestra pequeña ("v0.3.0") en su esquina inferior.
 2. **Icono de la aplicación.**
    - Nueva entrada en `tools/asset_spec.gd`: `assets/ui/app_icon.png`,
-     512×512. El generador crea su placeholder (silueta de un alambique o
-     matraz sobre fondo redondeado, con los colores del tema) y su plantilla
-     en `docs/plantillas/` con la zona segura (círculo de 410 px, como los
-     materiales). Ejecuta el generador **sin** `--force`.
+     512×512. En `tools/generate_placeholders.gd`, `_make_image` necesita una
+     rama `app_icon` (hoy los nombres desconocidos caen en `sparkle()`) que
+     dibuje la silueta de un alambique o matraz sobre fondo redondeado, con
+     los colores del tema; y su plantilla en `docs/plantillas/` con la zona
+     segura (círculo de 410 px, como los materiales). Ejecuta el generador
+     **sin** `--force` y con `-- --templates` (sin ese argumento no escribe
+     plantillas), y después `godot --headless --path . --import`.
    - `application/config/icon="res://assets/ui/app_icon.png"`. Borra
      `icon.svg` y su `.import` (es el logo de Godot) tras comprobar con `grep`
      que nada más lo referencia.
@@ -341,23 +413,29 @@ func set_version(version: String) -> void
      abiertas"). La ventana sí usa el icono del proyecto.
 3. **Salir.** Botón "Salir" en la vista de título y en la de pausa, oculto si
    `allow_quit` es false. `GameUI` emite `quit_requested` → `Main` llama a
-   `_settings.save()` y `get_tree().quit()`. `allow_quit` =
-   `not OS.has_feature("web")`.
-4. **Créditos.** Botón "Créditos" en la vista de título → `Root/CreditsView`
-   (pergamino, `mouse_filter = STOP`, "Volver"): nombre del juego, versión,
-   autoría, y un `ScrollContainer` con:
+   `_settings.save()`, para la música y sale **unos frames después** (p. ej.
+   `await get_tree().create_timer(0.1).timeout` antes de `get_tree().quit()`):
+   salir en el mismo frame deja la reproducción sin liberar (fase 0, paso 2).
+   `allow_quit` = `not OS.has_feature("web")`, por `set_platform`.
+4. **Créditos.** Botón "Créditos" en la vista de título → `CreditsView`
+   (`ui/credits_view.tscn`, instanciada en `GameUI`; modal como `OptionsView`,
+   con "Volver"): nombre del juego, versión, autoría, y un `ScrollContainer`
+   (con `custom_minimum_size.y`, o se colapsa a 0 de alto) con:
    - "Hecho con Godot Engine" y `Engine.get_license_text()` (la licencia MIT
      de Godot obliga a incluir el aviso en las copias distribuidas);
-   - la lista de componentes de terceros de `Engine.get_copyright_info()`
-     (solo los nombres);
+   - los textos de licencia de terceros de `Engine.get_license_info()`. La
+     guía oficial "Complying with licenses" exige incluir también los de
+     FreeType, ENet y mbedTLS: no basta con los nombres;
    - un hueco para la licencia OFL de la fuente, que se rellena al integrarla.
    La autoría y el texto exacto son decisión del usuario (ver "Decisiones
    abiertas"); deja un texto provisional claro ("Autor: por definir").
 5. **Presets de exportación.** Quita `export_presets.cfg` de `.gitignore`: los
    presets de escritorio y web no contienen secretos (los de Android sí, con el
    *keystore*; nunca se suben). Crea `export_presets.cfg` a mano con estos dos
-   presets (Godot completa al cargar las opciones que falten; ábrelo con
-   `godot --headless --path . --export-release "Linux" …` para comprobarlo):
+   presets. **Verificado:** en un `git clone` limpio (sin `.godot/`),
+   `--import` seguido de `--export-release` funciona con estos presets escritos
+   a mano, todas las claves existen en 4.7.2 y Godot no reescribe el archivo.
+   La carpeta de destino debe existir antes de exportar.
 
    ```ini
    [preset.0]
@@ -394,28 +472,45 @@ func set_version(version: String) -> void
    reimporta, ejecuta la suite de GUT (aborta si falla), crea `dist/<plataforma>/`
    y exporta cada preset con `--export-release`. Después, **prueba de humo**:
    ejecuta el binario de Linux con `--headless --quit-after 120` y falla si la
-   salida contiene `ERROR` o `SCRIPT ERROR` (ignora la fuga de la fase 0 solo si
-   quedó anotada como fallo del motor). En la fase 5 se le añade la web.
+   salida contiene `SCRIPT ERROR` o cualquier `ERROR`/`WARNING`, **salvo** las
+   dos líneas exactas de la fuga de la fase 0 (`ObjectDB instances were leaked
+   at exit` y `resources still in use at exit`) mientras sigan anotadas como no
+   resueltas: con `--quit-after` el juego no pasa por "Salir" y la fuga aparece
+   siempre (verificado en el binario exportado). Además empaqueta
+   `dist/el_alquimista_pobre_linux.zip` y `…_windows.zip` (el zip conserva el
+   permiso de ejecución del binario de Linux; itch.io lo necesita). En la fase
+   5 se le añade la web.
 7. **Comprobaciones manuales del build de release** (anótalas en el commit):
    - arranca con la pantalla de título y se juega una partida completa;
    - F1–F4 y F12 no hacen nada (`DebugController` solo actúa en builds de
      depuración);
    - el récord y los ajustes se guardan en `user://` del build exportado
      (`~/.local/share/godot/app_userdata/El Alquimista Pobre/`);
-   - el tamaño de los binarios (anótalo en `07` §7 como referencia).
-   Si `wine` está instalado, arranca también el `.exe`; si no, dilo en el
-   commit en lugar de darlo por probado.
-8. README: sección "Builds" con `tools/export_all.sh`, las rutas de `dist/` y
-   dónde guarda los datos el juego.
+   - el tamaño de los binarios (anótalo en `07` §7 como referencia; medidos en
+     la revisión: Linux 74 MB, Windows 110 MB).
+   El `.exe` de Windows **no** se ejecuta (nada de wine; ver regla 9): basta
+   con que el export se genere. Arrancarlo en Windows queda en la lista de
+   comprobaciones manuales del usuario en `07`.
+8. **Splash de arranque.** Hoy sale el de Godot. Pon
+   `application/boot_splash/bg_color` con el color de fondo del juego
+   (`environment/defaults/default_clear_color`) y
+   `application/boot_splash/show_image=false`: un arranque limpio sin imagen
+   de terceros. Un splash propio queda para cuando haya arte.
+9. README: sección "Builds" con `tools/export_all.sh`, las rutas de `dist/`,
+   dónde guarda los datos el juego y las plataformas: Linux, Windows y Web.
+   **macOS queda fuera** (requiere firma y notarización).
 
 ### Tests
 
 - `test_asset_spec.gd` ya cubre el icono al estar en la especificación; añade
   `test_project_icon_is_the_app_icon` (lee `application/config/icon`).
-- `test_game_ui.gd`: con `allow_quit = false` no se ve ningún "Salir"; "Salir"
-  emite `quit_requested`; "Créditos" abre la vista y su texto contiene la
-  primera línea de `Engine.get_license_text()`; `set_version` se ve en el
-  título; `CreditsView.mouse_filter == MOUSE_FILTER_STOP`.
+- `test_game_ui.gd`: con `set_platform(false, …)` no se ve ningún "Salir";
+  "Salir" emite `quit_requested`; "Créditos" abre la vista; `set_version` se ve
+  en el título.
+- `test_credits_view.gd` (nuevo): el texto contiene la primera línea de
+  `Engine.get_license_text()` ("Copyright (c) 2014-present Godot Engine
+  contributors…") y las licencias de FreeType, ENet y mbedTLS; la raíz cubre
+  la pantalla con `mouse_filter = STOP`; "Volver" emite `closed`.
 - El cierre no se prueba con GUT (`quit()` terminaría la propia suite). `Main`
   conecta `quit_requested` a un callback de dos líneas (`_settings.save()` y
   `get_tree().quit()`); el guardado ya lo cubren los tests de la fase 1.
@@ -460,14 +555,19 @@ var pause_button_rect: Rect2
 ## PORTRAIT si el alto supera al ancho; tamaño nulo o cuadrado → LANDSCAPE.
 static func orientation_for(window_size: Vector2i) -> Orientation
 static func base_size(orientation: Orientation) -> Vector2i
+## `top_clearance`: espacio libre que hace falta por encima del interior del
+## recipiente para la pieza en `spawn_y` y el artefacto. Lo calcula Main
+## (radio máximo soltable + lado del artefacto − `spawn_y`) para que `compute`
+## siga siendo pura y no escriba ese número a mano.
 static func compute(visible_size: Vector2, orientation: Orientation,
-		config: GameConfig) -> ScreenLayout
+		config: GameConfig, top_clearance: float) -> ScreenLayout
 
-# ui/display_director.gd (añadidos)
+# ui/display_director.gd (añadidos; `setup(allow_fullscreen, config)` ya
+# existe desde la fase 1)
 signal layout_changed(layout: ScreenLayout)
-## Además de `allow_fullscreen`, recibe la configuración para calcular la
-## disposición. Sustituye a la firma de la fase 1.
-func setup(allow_fullscreen: bool, config: GameConfig) -> void
+## Espacio libre sobre el recipiente (ver `ScreenLayout.compute`). Main lo
+## asigna antes de la primera disposición.
+func set_top_clearance(clearance: float) -> void
 ## Última disposición calculada (para los tests y para Main al componer).
 func get_layout() -> ScreenLayout
 
@@ -484,32 +584,53 @@ func apply_layout(layout: ScreenLayout) -> void
    PRÓXIMO + leyenda (1 columna) a la derecha, con los márgenes actuales de
    `game_ui.tscn` (32 px). El título "El Alquimista Pobre" del HUD se ve.
 2. **Disposición vertical**, base 576×1024 (el recipiente de 504 px de ancho
-   exterior ocupa el 87 %):
-   - franja superior (y 16–140): puntuación y récord a la izquierda, PRÓXIMO a
-     la derecha; sin el título del HUD (ya está en la vista de título);
-   - recipiente centrado en horizontal con `board_origin.y = 200`: deja sitio
-     para la pieza en `spawn_y` y el artefacto del alquimista, que se dibujan
-     hasta ~70 px por encima del interior;
-   - leyenda debajo del recipiente, en **2 columnas** (4 filas);
+   exterior ocupa el 87 %). Cuentas verificadas en la revisión, con
+   `container_width = 440`, `container_height = 600`, `wall_thickness = 32`,
+   `spawn_y = 40`, radio máximo soltable 46 (nivel 5) y artefacto de 64:
+   - recipiente centrado en horizontal con `board_origin.y = 220`: interior
+     x 68–508, y 220–820; exterior (con paredes) x 36–540, y 220–852. El
+     artefacto llega hasta `220 + 40 − 46 − 64 = 150`;
+   - franja superior **y 16–116** (el bloque de puntuación sin título mide
+     98 px, medido): puntuación y récord a la izquierda, PRÓXIMO a la derecha,
+     y el botón de pausa (fase 4) en la esquina superior derecha, a la
+     izquierda de PRÓXIMO; sin el título del HUD (ya está en la vista de
+     título). Entre 116 y 150 queda margen;
+   - leyenda debajo del recipiente, en **2 columnas** × 4 filas: y 868–982
+     (4 × 24 + 3 × 6 = 114 px, medido); filas de hasta 236 px de ancho, así
+     que 2 columnas ≈ 480 en 544 disponibles;
    - si el alto visible supera 1024 (móviles alargados), todo el bloque se
-     centra en vertical: se suma `(alto_visible − 1024) / 2` a cada `y`.
-   Comprueba con números que nada se solapa con `container_height = 600` y
-   `wall_thickness = 32`; si no cabe, ajusta las constantes de `ScreenLayout`,
-   no los datos del juego.
+     centra en vertical: se suma `(alto_visible − 1024) / 2` a cada `y`;
+   - con F4 (depuración, nivel 7, r = 68) el artefacto sube hasta y ≈ 108 y
+     puede tapar la franja: aceptable, es solo de depuración.
+   Si los datos cambian y algo deja de caber, ajusta las constantes de
+   `ScreenLayout`, no los datos del juego.
+   - En horizontal (1280×720) el suelo acaba en y 712 < 720 y los paneles quedan
+     fuera de x 388–892 (verificado). El botón de pausa va en la esquina
+     superior derecha (32 px de margen), encima de PRÓXIMO.
+   - `DebugLabel` está anclado abajo a la izquierda y en vertical tapa la
+     leyenda: muévelo a la esquina superior izquierda en vertical (solo
+     depuración).
 3. **`ScreenLayout.compute` es pura.** Ningún nodo, ninguna consulta a la
    ventana: recibe el tamaño visible y devuelve rectángulos. Así se prueba con
    cualquier tamaño de pantalla sin abrir ventanas.
 4. **`DisplayDirector`** escucha `get_tree().root.size_changed`:
    1. calcula la orientación con `get_window().size` (píxeles físicos);
-   2. si su base difiere de `get_window().content_scale_size`, la asigna (esto
-      vuelve a emitir `size_changed`; la segunda vez la base ya coincide y no se
-      repite: compruébalo con un test o un contador);
+   2. si su base difiere de `get_window().content_scale_size`, la asigna y
+      **retorna**: asignarla emite `size_changed` de forma síncrona
+      (reentrante), y esa llamada interna ya calcula y emite la disposición.
+      Sin el `return`, `layout_changed` se emitiría dos veces (verificado;
+      asignar el mismo valor no emite, así que no hay bucle);
    3. calcula `ScreenLayout.compute(get_viewport().get_visible_rect().size, …)`
       y emite `layout_changed`.
+   En GUT headless la ventana mide 64×64: cuenta como `LANDSCAPE`, la base ya
+   coincide y los tests no cambian el estado global de la ventana.
    Al llamar a `setup`, hace lo mismo una vez para que `Main` tenga la
    disposición inicial.
 5. **`Main`**: elimina `_update_world_position` y su conexión a
-   `size_changed`; conecta `layout_changed` a un callback que hace
+   `size_changed` (y reescribe el párrafo de `02` §5 que lo describe); calcula
+   `top_clearance` con `config.piece_catalog`, la estrategia y
+   `DropPreview.dropper_size`, y lo pasa con `set_top_clearance`; conecta
+   `layout_changed` a un callback que hace
    `_world.position = layout.board_origin` y `_ui.apply_layout(layout)`.
    `DropSystem.request_aim_global` ya convierte a coordenadas de tablero con
    `to_local`, así que el apuntado con ratón no cambia.
@@ -518,7 +639,12 @@ func apply_layout(layout: ScreenLayout) -> void
    (un `GridContainer`; `columns` = `legend_columns`). `apply_layout` asigna
    `position` y `size` de cada panel desde los rectángulos (sin anclas). Las
    vistas centradas (título, pausa, opciones, créditos, fin) siguen ancladas al
-   centro y caben en 576 de ancho (mínimo 320).
+   centro y caben en 576 de ancho (la más ancha mide 400, medido).
+   **Tests que se rompen** al renombrar y cambiar el tipo de la leyenda
+   (`VBoxContainer` → `GridContainer`): `test_game_ui.gd` (líneas ~26, 31, 36,
+   81–87, 102, 110, 172 y 188, con casts `as VBoxContainer`) y
+   `test_session_integration.gd` (~110). Actualízalos en el mismo commit y añade
+   los paneles nuevos a `test_non_interactive_containers_ignore_mouse`.
 7. **Fondo del taller**: comprueba que `Background/Workshop` cubre la pantalla
    en ambas orientaciones (`stretch_mode = KEEP_ASPECT_COVERED`, anclado a
    toda la pantalla); en vertical se recorta por los lados, como se espera.
@@ -539,7 +665,8 @@ func apply_layout(layout: ScreenLayout) -> void
     1280×960, 1706×720; vertical: 576×1024, 576×1250, 640×1024):
     - todos los rectángulos están dentro del área visible;
     - ninguno se cruza con el rectángulo exterior del recipiente (interior más
-      paredes, y 80 px por encima del interior para la pieza y el artefacto);
+      paredes, y `top_clearance` por encima del interior; usa el valor real que
+      calcula `Main` con los datos del juego, 70 hoy);
     - los paneles no se cruzan entre sí;
     - `legend_rect` tiene alto para `ceil(8 / legend_columns)` filas de 30 px
       (icono de 24 + separación de 6);
@@ -560,8 +687,12 @@ func apply_layout(layout: ScreenLayout) -> void
 
 - `input_devices/pointing/emulate_mouse_from_touch` está activo por defecto:
   cada toque genera además un evento de ratón **emulado**, con
-  `device == InputEvent.DEVICE_ID_EMULATION` (−1). Un ratón real tiene
-  `device` 0.
+  `device == InputEvent.DEVICE_ID_EMULATION` (−1), que llega **antes** que el
+  toque. Un ratón real usa `InputEvent.DEVICE_ID_MOUSE` (32; es lo que trae
+  `InputEventMouseButton.new()`; con un ratón físico es sospecha razonable, no
+  verificado). El filtro compara con `DEVICE_ID_EMULATION`, que sí está
+  verificado.
+- `InputEventScreenTouch.canceled` existe en 4.7.
 - Un `Button` consume **tanto** el `InputEventScreenTouch` crudo como el clic
   emulado: un toque sobre un botón nunca llega a `_unhandled_input`. Los paneles
   con `mouse_filter = IGNORE` sí lo dejan pasar.
@@ -590,10 +721,9 @@ Con la partida en `READY`, levantar el dedo empieza la partida sin soltar
 ## Índice del dedo que apunta; -1 si ninguno.
 var _touch_index: int = -1
 
-# ui/game_ui.gd (añadidos)
+# ui/game_ui.gd (añadidos; `touch_hints` llega por `set_platform`: textos
+# para pantalla táctil, "Toca para empezar" y "Reiniciar" sin "(R)")
 signal pause_requested           # botón de pausa del HUD
-## Textos para pantalla táctil ("Toca para empezar", "Reiniciar" sin "(R)").
-@export var touch_hints: bool = false
 ```
 
 ### Pasos
@@ -617,17 +747,20 @@ signal pause_requested           # botón de pausa del HUD
    en `PLAYING`. Emite `GameUI.pause_requested` → `Main` lo conecta al mismo
    `_on_pause_requested` que la tecla. Se ve también en escritorio (sirve con
    ratón).
-3. **Tamaño táctil.** En vertical, los botones de las vistas miden al menos
-   64 unidades de alto (≈ 44 px CSS en un móvil de 390 de ancho). Hazlo con una
-   variación de tema (`TouchButton`) que `apply_layout` asigna en vertical, no
-   con overrides sueltos.
-4. **Textos.** `Main` pone `touch_hints = DisplayServer.is_touchscreen_available()`.
+3. **Tamaño táctil.** Con `touch_hints`, en **cualquier** orientación, los
+   botones de las vistas usan la variación de tema `TouchButton` (alto mínimo
+   64 unidades en vertical ≈ 44 px CSS en un móvil de 390 de ancho; en
+   horizontal la escala es menor —844×390 da ≈ 0,54—, así que el alto en
+   horizontal debe ser ~80 unidades para no quedarse en ~22 px CSS). Asígnala
+   en `set_platform`/`apply_layout`, no con overrides sueltos.
+4. **Textos.** `Main` pasa `touch_hints = DisplayServer.is_touchscreen_available()`
+   con `set_platform`.
    Con `touch_hints`: "Toca para empezar" en el título y "Reiniciar" en las
    vistas de fin.
 5. **Prueba en escritorio.** No hay forma limpia de emular el táctil con el
    ratón sin duplicar eventos (`emulate_touch_from_mouse` generaría ambos). La
-   lógica se prueba con eventos sintéticos en los tests; el dispositivo real,
-   en la fase 5.
+   lógica se prueba con eventos sintéticos en los tests; el dispositivo real
+   lo prueba el usuario (fase 5).
 6. Actualiza `04` §4 (tabla de gestos) y `07` §6 (botón de pausa, textos
    táctiles, tamaño de botones).
 
@@ -636,14 +769,16 @@ signal pause_requested           # botón de pausa del HUD
 - `test_drop_controller.gd` (llamando a `_unhandled_input` con eventos
   sintéticos, como ya hace):
   - clic y movimiento con `device = DEVICE_ID_EMULATION` no emiten nada;
-  - con `device = 0`, el ratón sigue funcionando como antes;
+  - con `device = InputEvent.DEVICE_ID_MOUSE`, el ratón sigue funcionando como
+    antes;
   - apoyar → `aim_requested(x)`; arrastrar → `aim_requested(x2)`; levantar →
     `drop_requested` una sola vez;
   - un segundo dedo (otro índice) no apunta ni suelta;
   - levantar con `canceled = true` no suelta;
   - pausar con un dedo apoyado y despausar: levantar no suelta.
 - `test_game_ui.gd`: el botón de pausa solo se ve en `PLAYING` y emite
-  `pause_requested`; con `touch_hints` cambian los textos.
+  `pause_requested`; con `set_platform(…, touch_hints = true)` cambian los
+  textos y los botones usan `TouchButton`.
 - `test_session_integration.gd`: en `READY`, apoyar y levantar empieza la
   partida sin crear piezas; un segundo toque completo crea exactamente una
   pieza en la X del dedo (convertida a tablero, acotada por el radio).
@@ -681,40 +816,48 @@ signal pause_requested           # botón de pausa del HUD
    soporta la web).
 2. **Ajustes de plataforma en `Main`** (afina los de las fases 1 y 2):
    - `allow_quit = not OS.has_feature("web")`;
-   - `allow_fullscreen`: en web solo en navegadores de escritorio. Comprueba en
-     la documentación de 4.7 los *feature tags* `web_android` / `web_ios`; si
-     no existen, usa `not DisplayServer.is_touchscreen_available()`. En web, el
-     cambio de modo funciona porque se hace dentro del clic en la casilla (un
-     gesto del usuario).
+   - `allow_fullscreen`: en web solo en navegadores de escritorio:
+     `not (OS.has_feature("web_android") or OS.has_feature("web_ios"))` (los
+     *feature tags* existen en la plantilla web de 4.7.2, verificado). Que el
+     cambio de modo funcione en web es **dudoso**: el navegador exige que ocurra
+     dentro del gesto del usuario y Godot puede procesar la entrada fuera de ese
+     callback. Queda en la lista de comprobación del usuario; si falla, oculta
+     la casilla en web y confía en el botón de pantalla completa de itch.io.
 3. **Audio.** Los navegadores no dejan sonar nada hasta el primer gesto del
    usuario; Godot reanuda el audio en la primera entrada. La pantalla de
-   título garantiza ese gesto. Comprueba en el navegador que la música empieza
-   al primer clic o toque; si no, haz que `AudioDirector` arranque la música
-   la primera vez que el estado pase a `PLAYING` (y anótalo).
-4. **Persistencia.** En web, `user://` vive en IndexedDB. Comprueba
-   `OS.is_userfs_persistent()` en una partida de prueba (imprímelo solo en
-   builds de depuración). Si es `false` (navegación privada), récord y ajustes
-   funcionan en memoria sin errores. Comprueba que el récord sobrevive a
-   recargar la página.
-5. **Pausa al cambiar de pestaña.** `NOTIFICATION_APPLICATION_FOCUS_OUT` debe
-   llegar al ocultar la pestaña; compruébalo. Si no llega, anótalo (no lo
-   sustituyas por JavaScript).
-6. **`tools/export_all.sh`**: añade el preset Web y un `zip` de `dist/web/`
-   (`dist/el_alquimista_pobre_web.zip`, listo para itch.io).
-7. **Prueba local**: `python3 -m http.server 8000 -d dist/web` y abrir
-   `http://localhost:8000` en Chrome y Firefox. Para un móvil en la misma red:
+   título garantiza ese gesto. Va a la lista de comprobación del usuario: si
+   la música no empieza al primer clic o toque, la corrección (en otra
+   iteración) es arrancarla la primera vez que el estado pase a `PLAYING`.
+4. **Persistencia.** En web, `user://` vive en IndexedDB. `Main` imprime
+   `OS.is_userfs_persistent()` al arrancar, solo en builds de depuración. Con
+   `false` (navegación privada), récord y ajustes funcionan en memoria sin
+   errores (ya lo garantiza la ruta de error de `ScoreStore` y
+   `SettingsStore`). Que el récord sobreviva a recargar la página va a la
+   lista de comprobación.
+5. **Pausa al cambiar de pestaña.** `NOTIFICATION_APPLICATION_FOCUS_OUT` debería
+   llegar al ocultar la pestaña; va a la lista de comprobación (si no llega,
+   se anota; no se sustituye por JavaScript).
+6. **`tools/export_all.sh`**: añade el preset Web y un zip con `index.html` en
+   la **raíz** (`cd dist/web && zip -r ../el_alquimista_pobre_web.zip .`;
+   itch.io no encuentra el juego si va dentro de una carpeta). El wasm pesa
+   ~39 MB: anótalo en `07` (afecta a la carga con datos móviles).
+7. **Prueba local (manual, del usuario; el agente no levanta servidores ni
+   abre navegadores):** documenta en el README
+   `python3 -m http.server 8000 -d dist/web` y abrir `http://localhost:8000`
+   en Chrome y Firefox; para un móvil en la misma red,
    `http://<IP-del-equipo>:8000`. Si el navegador del móvil exige contexto
-   seguro, usa un borrador privado en itch.io (paso 9) en lugar de inventar
-   certificados.
-8. **Lista de comprobación en dispositivo** (rellénala en `07` §8, nueva, con
-   navegador y dispositivo; lo no probado se marca "sin probar", no se da por
-   bueno):
+   seguro, usar un borrador privado en itch.io (paso 9).
+8. **Lista de comprobación en dispositivo** (créala en `07` §8, nueva, con
+   columnas navegador/dispositivo/resultado, todo "sin probar"; la rellena el
+   usuario):
    - carga y pantalla de título; música tras el primer toque;
    - vertical y horizontal, y girar el móvil en mitad de la partida;
    - arrastrar y soltar; botón de pausa; opciones (volúmenes, silencio);
    - récord tras recargar la página;
    - pausa al cambiar de pestaña;
-   - fluidez con el recipiente casi lleno (subjetiva; anota el modelo).
+   - fluidez con el recipiente casi lleno (subjetiva; anota el modelo);
+   - pantalla completa desde Opciones (escritorio);
+   - el `.exe` de Windows arranca y se juega (fase 2).
 9. **itch.io** (solo instrucciones en el README; publicar es decisión del
    usuario): proyecto HTML, subir el zip, "This file will be played in the
    browser", tamaño de ventana 1280×720, "Mobile friendly" con orientación
@@ -724,10 +867,8 @@ signal pause_requested           # botón de pausa del HUD
 
 ### Tests
 
-- La web no se prueba con GUT. Añade a `test_session_integration.gd` el caso de
-  plataforma que sí es lógica: con `allow_quit = false` y
-  `allow_fullscreen = false` inyectados, no hay botón "Salir" ni casilla de
-  pantalla completa visibles.
+- La web no se prueba con GUT, y los *flags* de plataforma ya los cubren los
+  tests de `set_platform` en `test_game_ui.gd`. No hace falta un test nuevo.
 
 **Commit:** `build(web): exportación web sin hilos y ajustes de plataforma`
 
@@ -774,6 +915,8 @@ no inventes sensaciones ni resultados, y no cambies ningún valor.
 | Vibración en fusiones altas (`Input.vibrate_handheld`) | No en esta iteración (soporte web irregular) | Siguiente iteración |
 | Publicar en itch.io | Borrador privado primero para probar en el móvil | Fase 5 |
 | Exportación nativa Android/iOS | Fuera; la web cubre el móvil | Siguiente iteración |
+| macOS | Fuera (firma y notarización) | Siguiente iteración |
+| Splash propio al arrancar | Sin imagen, solo color de fondo, hasta que haya arte | Al integrar el arte |
 
 ---
 
