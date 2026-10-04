@@ -5,6 +5,11 @@ extends Node2D
 const _GUIDE_COLOR := Color(1.0, 1.0, 1.0, 0.25)
 const _COOLDOWN_ALPHA: float = 0.4
 
+## Sprite opcional del artefacto del alquimista, sobre la pieza ACTUAL.
+@export var dropper_texture: Texture2D
+## Lado en px de juego con el que se dibuja (el PNG es de 256: 4× de resolución).
+@export var dropper_size: float = 64.0
+
 var _state: GameState
 var _config: GameConfig
 var _aim_x: float = 0.0
@@ -22,6 +27,10 @@ func _draw() -> void:
 	draw_dashed_line(origin + Vector2(0.0, data.radius), Vector2(_aim_x, _config.container_height),
 			_GUIDE_COLOR, 2.0, 8.0)
 	PieceVisual.draw_piece(self, data, origin, data.radius, alpha)
+	if dropper_texture != null:
+		# Su borde inferior queda justo encima de la pieza, también en el cooldown.
+		var top_left := Vector2(_aim_x - dropper_size / 2.0, _config.spawn_y - data.radius - dropper_size)
+		draw_texture_rect(dropper_texture, Rect2(top_left, Vector2(dropper_size, dropper_size)), false)
 
 
 func setup(state: GameState, drop_system: DropSystem, config: GameConfig) -> void:

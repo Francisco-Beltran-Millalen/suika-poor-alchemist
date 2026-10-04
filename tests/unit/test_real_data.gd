@@ -73,3 +73,10 @@ func test_every_material_uses_its_sprite() -> void:
 		if piece.texture != null:
 			assert_eq(piece.texture.resource_path,
 					"res://assets/sprites/pieces/%s.png" % piece.id, "ruta de %s" % piece.id)
+
+
+func test_board_skin_points_to_the_jar_sprites() -> void:
+	var skin := load("res://board/board_skin.tres") as BoardSkin
+	assert_not_null(skin)
+	assert_eq(skin.back_texture.resource_path, "res://assets/sprites/scene/jar_back.png")
+	assert_eq(skin.front_texture.resource_path, "res://assets/sprites/scene/jar_front.png")

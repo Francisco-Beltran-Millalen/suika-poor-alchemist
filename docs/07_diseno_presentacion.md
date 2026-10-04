@@ -14,7 +14,44 @@ opcional: con `null` el juego usa el dibujo procedural o el silencio.
 
 ## 2. Orden de capas
 
-*(Se completa con el escenario, en la fase 4.)*
+De atrás hacia delante:
+
+| # | Capa | Contenido |
+| - | ---- | --------- |
+| 1 | `Background` (`CanvasLayer` −1) | Fondo del taller, a pantalla completa |
+| 2 | `World/Board/BackVisual` | Interior del frasco y línea de peligro |
+| 3 | `World/Board/Pieces` | Piezas físicas |
+| 4 | `World/Board/FrontVisual` | Paredes, suelo y reflejos del frasco |
+| 5 | `World/DropPreview` | Pieza ACTUAL, línea guía y artefacto |
+| 6 | `World/EffectsLayer` | Efectos de fusión, peligro y victoria |
+| 7 | `GameUI` (`CanvasLayer`) | HUD y pantallas |
+
+La línea de peligro va en la capa 2: las piezas la tapan, como en el juego
+original.
+
+### 2.1. Escenario (Anexo A.2)
+
+- **Fondo.** `TextureRect` con `expand_mode = ignore size` y
+  `stretch_mode = keep aspect covered`: el recorte "cubrir" deja el centro
+  siempre visible y recorta los laterales según la ventana. El frasco ocupa
+  el centro, así que ahí el fondo debe ser oscuro y con poco detalle. Sin
+  textura, se ve el color de fondo del proyecto.
+- **Frasco.** `BoardSkin` (`board/board_skin.tres`) agrupa `back_texture`
+  (880×1200, interior a escala 2×), `front_texture` (1008×1264, exterior a
+  escala 2×) y el color de la línea de peligro. `BackVisual` dibuja el interior
+  en `(0, 0, W, H)`; `FrontVisual`, el exterior en `(−t, 0, W + 2t, H + t)`
+  (`t = wall_thickness`). Sin textura, cada capa dibuja el placeholder
+  procedural (fondo plano y paredes de madera).
+- **Coincidencia con la colisión.** Las paredes de colisión suben
+  `DangerZone.EXTENSION_ABOVE` (400 px) por encima de la boca: con textura esa
+  parte queda **invisible a propósito**, es una barrera para pilas que
+  sobresalen y la partida se pierde antes de que importe. Al comparar con
+  `--debug-collisions`, solo cuenta la parte desde `y = 0`.
+- **Artefacto.** `DropPreview.dropper_texture` se dibuja en un cuadrado de
+  `dropper_size` (64 px) centrado en `aim_x`, con el borde inferior en
+  `spawn_y − radius` y también durante el cooldown. Con la pieza generable más
+  grande (radio 46) su borde superior queda a 10 px del borde de la pantalla;
+  con una pieza más grande (F4) se recorta, y se acepta porque es depuración.
 
 ---
 

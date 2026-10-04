@@ -98,6 +98,8 @@ Reglas:
 | `DropPreview`            | Presentación | `Node2D`        | `ui/drop_preview.gd`                 |
 | `EffectsLayer`           | Presentación | `Node2D`        | `ui/effects_layer.gd`                |
 | `PieceIcon`              | Presentación | `Control`       | `ui/piece_icon.gd`                   |
+| `BoardVisual`            | Presentación | `Node2D`        | `board/board_visual.gd`              |
+| `BoardSkin`              | Datos        | `Resource`      | `board/board_skin.gd` + `.tres`      |
 | `DebugController`        | Presentación | `Node`          | `ui/debug_controller.gd`             |
 | `GameUI`                 | Presentación | `CanvasLayer`   | `ui/game_ui.gd` + `.tscn`            |
 
@@ -135,6 +137,9 @@ Responsabilidad única de cada uno:
   línea guía.
 - **EffectsLayer**: efectos de fusión, advertencia de peligro y animación de
   victoria.
+- **BoardVisual**: dibuja una capa del recipiente (`BACK` detrás de las piezas,
+  `FRONT` delante) con las texturas de `BoardSkin`, o el placeholder procedural.
+  `Board` ya no dibuja nada.
 - **DebugController**: traduce F1–F4 y F12 en intenciones de depuración; solo
   actúa en builds de depuración.
 - **GameUI**: puntuación, PRÓXIMO, leyenda de rareza y pantallas de Game Over
@@ -151,11 +156,14 @@ modifica la simulación.
 ```text
 main.tscn
 └── Main (Node)                         game/main.gd
+    ├── Background (CanvasLayer)        layer −1: TextureRect del taller
     ├── World (Node2D)                  posición = origen del interior del recipiente
     │   ├── Board (board.tscn)          en (0, 0) → coordenadas de tablero = locales de World
     │   │   ├── Walls (StaticBody2D)    3 CollisionShape2D creados en setup()
     │   │   ├── DangerZone (danger_zone.tscn)
-    │   │   └── Pieces (Node2D)         contenedor de las Piece
+    │   │   ├── BackVisual (BoardVisual)   interior, detrás de las piezas
+    │   │   ├── Pieces (Node2D)         contenedor de las Piece
+    │   │   └── FrontVisual (BoardVisual)  paredes y reflejos, delante
     │   ├── DropPreview (Node2D)
     │   └── EffectsLayer (Node2D)
     ├── Systems (Node)

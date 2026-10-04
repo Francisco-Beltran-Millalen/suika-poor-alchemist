@@ -77,3 +77,18 @@ func test_set_frozen_changes_process_mode() -> void:
 	assert_eq(_board.pieces_root.process_mode, Node.PROCESS_MODE_DISABLED)
 	_board.set_frozen(false)
 	assert_eq(_board.pieces_root.process_mode, Node.PROCESS_MODE_INHERIT)
+
+
+func test_visual_layers_surround_the_pieces() -> void:
+	var back: Node = _board.get_node("BackVisual")
+	var front: Node = _board.get_node("FrontVisual")
+	assert_lt(back.get_index(), _board.pieces_root.get_index(), "BackVisual va antes de Pieces")
+	assert_gt(front.get_index(), _board.pieces_root.get_index(), "FrontVisual va después de Pieces")
+	assert_eq((back as BoardVisual).layer, BoardVisual.Layer.BACK)
+	assert_eq((front as BoardVisual).layer, BoardVisual.Layer.FRONT)
+
+
+func test_board_keeps_walls_and_danger_zone_after_refactor() -> void:
+	assert_eq(_board.get_node("Walls").get_child_count(), 3)
+	assert_not_null(_board.danger_zone)
+	assert_not_null(_board.danger_zone.get_node("CollisionShape2D").shape)

@@ -1,7 +1,9 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://board/board.gd" id="1_board"]
 [ext_resource type="PackedScene" path="res://board/danger_zone.tscn" id="2_danger"]
+[ext_resource type="Script" path="res://board/board_visual.gd" id="3_visual"]
+[ext_resource type="Resource" path="res://board/board_skin.tres" id="4_skin"]
 
 [node name="Board" type="Node2D"]
 script = ExtResource("1_board")
@@ -12,4 +14,13 @@ collision_mask = 0
 
 [node name="DangerZone" parent="." instance=ExtResource("2_danger")]
 
+[node name="BackVisual" type="Node2D" parent="."]
+script = ExtResource("3_visual")
+skin = ExtResource("4_skin")
+
 [node name="Pieces" type="Node2D" parent="."]
+
+[node name="FrontVisual" type="Node2D" parent="."]
+script = ExtResource("3_visual")
+layer = 1
+skin = ExtResource("4_skin")
