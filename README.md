@@ -4,7 +4,7 @@ Juego de puzzle y física inspirado en la mecánica de **Suika Game**, ambientad
 taller alquímico donde un alquimista chatarrero transmuta materiales desde chatarra
 y metales comunes hasta la mítica Piedra Filosofal.
 
-Estado: **jugable de principio a fin** (fases 0–8 del plan; pendientes las pruebas de juego con las tres estrategias).
+Estado: **jugable de principio a fin**; iteración 2 en curso ([`docs/06_plan_iteracion_2.md`](docs/06_plan_iteracion_2.md)).
 
 ---
 
@@ -64,5 +64,6 @@ godot --path . --debug-collisions --scene res://game/main.tscn
 - [`docs/03_data_design.md`](docs/03_data_design.md) — Especificación de datos y balance configurable.
 - [`docs/04_gameplay_design.md`](docs/04_gameplay_design.md) — Reglas detalladas de colocación y fusión.
 - [`docs/05_plan_implementacion.md`](docs/05_plan_implementacion.md) — Plan de implementación paso a paso (guía temporal).
+- [`docs/06_plan_iteracion_2.md`](docs/06_plan_iteracion_2.md) — Plan de la iteración 2 (guía temporal).
 - [`docs/el_alquimista_pobre_concepto.md`](docs/el_alquimista_pobre_concepto.md) — Progresión de valor y ambientación.
 - [`docs/RULES.md`](docs/RULES.md) — Guía de estilo y reglas de codificación.

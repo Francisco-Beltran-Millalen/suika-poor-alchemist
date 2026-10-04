@@ -33,3 +33,18 @@ func test_despawn_removes_in_same_frame() -> void:
 	_spawner.despawn(piece)
 	assert_eq(_board.pieces_root.get_child_count(), 0)
 	assert_true(piece.is_queued_for_deletion())
+
+
+func test_despawn_wakes_remaining_pieces() -> void:
+	var catalog: PieceCatalog = _config.piece_catalog
+	var removed: Piece = _spawner.spawn(catalog.get_by_level(1), Vector2(100.0, 100.0), Piece.State.ACTIVE)
+	var keep_a: Piece = _spawner.spawn(catalog.get_by_level(1), Vector2(200.0, 100.0), Piece.State.ACTIVE)
+	var keep_b: Piece = _spawner.spawn(catalog.get_by_level(1), Vector2(300.0, 100.0), Piece.State.ACTIVE)
+	# Una pieza recién creada nunca está dormida: se fuerza para que el test
+	# falle si `despawn` no despierta nada.
+	keep_a.sleeping = true
+	keep_b.sleeping = true
+	assert_true(keep_a.sleeping and keep_b.sleeping, "precondición")
+	_spawner.despawn(removed)
+	assert_false(keep_a.sleeping)
+	assert_false(keep_b.sleeping)

@@ -23,8 +23,15 @@ func spawn(data: PieceData, position: Vector2, initial_state: Piece.State) -> Pi
 	return piece
 
 
-## Quita la pieza de inmediato (`remove_child` + `queue_free`).
+## Quita la pieza de inmediato (`remove_child` + `queue_free`) y despierta las
+## piezas restantes: un cuerpo dormido no reacciona a que desaparezca su apoyo.
 func despawn(piece: Piece) -> void:
 	if piece.get_parent() == _pieces_root:
 		_pieces_root.remove_child(piece)
 	piece.queue_free()
+	# Se despiertan todas (no solo las que tocaban a la eliminada): una pila
+	# dormida solo se despierta en cadena si se mueve la de abajo.
+	for child: Node in _pieces_root.get_children():
+		var other := child as Piece
+		if other != null:
+			other.sleeping = false

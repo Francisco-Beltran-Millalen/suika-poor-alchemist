@@ -72,3 +72,19 @@ func test_frozen_board_keeps_pieces_still() -> void:
 	var frozen_at: Vector2 = piece.position
 	await wait_physics_frames(30)
 	assert_eq(piece.position, frozen_at)
+
+
+func test_sleeping_piece_falls_when_support_is_despawned() -> void:
+	var spawner := PieceSpawner.new()
+	autofree(spawner)
+	spawner.setup(_board.pieces_root)
+	var support: Piece = spawner.spawn(_config.piece_catalog.get_by_level(5),
+			Vector2(220.0, _config.container_height - 46.0), Piece.State.ACTIVE)
+	var top: Piece = spawner.spawn(_config.piece_catalog.get_by_level(1),
+			Vector2(220.0, _config.container_height - 92.0 - 16.0), Piece.State.ACTIVE)
+	await wait_physics_frames(240)
+	assert_true(top.sleeping, "precondición: la pieza de arriba duerme")
+	spawner.despawn(support)
+	await wait_physics_frames(120)
+	assert_almost_eq(top.position.y, _config.container_height - top.get_radius(), 3.0,
+			"cae hasta el suelo")

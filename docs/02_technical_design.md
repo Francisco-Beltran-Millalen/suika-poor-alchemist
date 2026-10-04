@@ -230,91 +230,35 @@ una sola vez `piece_spawned`, y el sistema se suscribe a cada pieza nueva.
 
 ## 8. Flujos
 
-### 8.1. Soltar
+Las reglas están en `04_gameplay_design.md`; aquí solo el *quién llama a quién*.
 
-```text
-DropController.drop_requested
-  → DropSystem.request_drop()
-      ¿PLAYING y cooldown == 0?  no → ignorar
-      x = clamp(aim_x, r, width − r)       r = current.radius
-      PieceSpawner.spawn(current, (x, spawn_y), DROPPING)
-      GameState.advance_queue(PieceGenerator.next())
-      cooldown = drop_cooldown → drop_ready_changed(false)
-```
-
-### 8.2. Fusión
-
-```text
-[paso de física N, durante el flush de contactos]
-Piece.body_entered(other)
-  → si state == DROPPING: state = ACTIVE
-  → si other es Piece: contact_detected(self, other)
-MergeSystem.handle_contact(a, b)
-  ¿PLAYING? ¿a != b? ¿a.data == b.data? ¿ninguna CONSUMED?   no → ignorar
-  a.consume(); b.consume()            ← exclusión inmediata
-  pending.append([a, b])
-
-[inicio del paso N+1, MergeSystem._physics_process → tick()]
-para cada par en pending (en orden):
-  ¿sigue PLAYING?  no → vaciar pending y salir
-  pos = (a.position + b.position) / 2
-  PieceSpawner.despawn(a); PieceSpawner.despawn(b)     ← primero eliminar
-  si source.is_max_level():
-      max_level_merged(source, pos)   → ProgressSystem: +victory_bonus, set_victory()
-  si no:
-      p = Board.clamp_piece_position(pos, next.radius)
-      PieceSpawner.spawn(next, p, ACTIVE)
-      pieces_merged(source, next, p)  → ProgressSystem: +next.score_value
-```
-
-La resolución se difiere porque Godot no permite añadir ni eliminar cuerpos
-durante el flush de consultas físicas (*"Can't change this state while
-flushing queries"*). Se usa una cola propia en lugar de `call_deferred()` para
-que el orden sea explícito y la cola se pueda vaciar al reiniciar.
-
-Cascadas: la pieza nueva se registra mediante `piece_spawned`, como cualquier
-otra, y sus contactos vuelven a entrar en este flujo.
-
-### 8.3. Peligro y Game Over
-
-```text
-DangerSystem._physics_process → tick(delta)
-  ¿PLAYING?  no → salir
-  dentro = DangerZone.get_pieces_inside() filtradas a state == ACTIVE
-  timers[id] += delta para las de dentro; borrar las que salieron
-  danger_changed(max(timers) / game_over_delay)
-  si max(timers) ≥ game_over_delay → GameState.set_game_over()
-```
-
-`DangerZone` es un rectángulo que va de `y = −400` a `y = danger_line_y` y
-cubre todo el ancho. Cualquier pieza con alguna parte por encima de la línea
-lo solapa.
-
-### 8.4. Fin de partida
-
-```text
-GameState.status_changed(GAME_OVER | VICTORY)
-  → Main: Board.set_frozen(true)
-  → GameUI: muestra la pantalla correspondiente
-DropSystem, MergeSystem y DangerSystem consultan is_playing() y no actúan.
-```
-
-### 8.5. Reinicio
-
-```text
-restart_requested (GameUI o DropController, solo si GameState.is_finished())
-  → Main._start_new_game():
-      MergeSystem.reset()      cancela las fusiones pendientes
-      DangerSystem.reset()     borra los contadores
-      Board.clear_pieces()     elimina las piezas (remove_child + queue_free)
-      PieceGenerator.reset()   vuelve a sembrar el RNG si hay semilla fija
-      GameState.reset()        score 0, cola vacía, READY
-      DropSystem.reset()       rellena ACTUAL/PRÓXIMO, cooldown 0, apuntado al centro
-      Board.set_frozen(false)
-      GameState.start()        PLAYING
-```
-
-El primer arranque usa la misma función.
+- **Soltar:** `DropController.drop_requested` → `DropSystem.request_drop()`:
+  solo en `PLAYING` y sin cooldown; limita la X por el radio del ACTUAL;
+  `PieceSpawner.spawn(..., DROPPING)`; `GameState.advance_queue(...)`;
+  empieza el cooldown.
+- **Fusión (dos tiempos).** En el flush de contactos, `Piece.contact_detected`
+  → `MergeSystem.handle_contact(a, b)` valida (`04` §8), marca ambas
+  `CONSUMED` y las encola. En el `tick()` del paso siguiente, por cada par y
+  en orden: si ya no es `PLAYING`, vacía la cola; elimina A y B
+  (`PieceSpawner.despawn`); si el material es de nivel máximo emite
+  `max_level_merged`, y si no crea la siguiente pieza en el punto medio
+  limitado por `Board.clamp_piece_position` y emite `pieces_merged`.
+  `ProgressSystem` puntúa y declara la victoria. Se difiere porque Godot no
+  permite añadir ni eliminar cuerpos durante el flush (*"Can't change this
+  state while flushing queries"*); la cola propia mantiene el orden explícito
+  y se vacía al reiniciar. La pieza nueva se registra por `piece_spawned`, de
+  modo que la cascada vuelve a entrar en este mismo flujo.
+- **Peligro:** `DangerSystem.tick(delta)` (solo en `PLAYING`) acumula un
+  contador por pieza `ACTIVE` que `DangerZone` reporta dentro; emite
+  `danger_changed(max/delay)` y, al llegar a `game_over_delay`,
+  `GameState.set_game_over()`. `DangerZone` cubre de `y = −400` a
+  `danger_line_y` y todo el ancho.
+- **Fin de partida:** `status_changed(GAME_OVER | VICTORY)` → `Main` congela el
+  tablero y `GameUI` muestra la vista. Los sistemas consultan `is_playing()`.
+- **Reinicio** (solo si `GameState.is_finished()`), en `Main._start_new_game()`:
+  `MergeSystem.reset()`, `DangerSystem.reset()`, `Board.clear_pieces()`,
+  `PieceGenerator.reset()`, `GameState.reset()`, `DropSystem.reset()`,
+  descongelar y `GameState.start()`. El primer arranque usa la misma función.
 
 ---
 
@@ -327,7 +271,7 @@ El primer arranque usa la misma función.
    en `_ready()`. Si se modificara el `radius` del sub-recurso de
    `piece.tscn`, cambiaría en todas las instancias, porque se comparte.
 3. **Nada de añadir o eliminar cuerpos durante el flush de contactos:** se
-   difiere al `tick()` del paso siguiente (§8.2).
+   difiere al `tick()` del paso siguiente (§8, Fusión).
 4. **Congelar:** `Board.set_frozen(true)` pone `Pieces.process_mode =
    PROCESS_MODE_DISABLED`. `piece.tscn` usa `disable_mode =
    DISABLE_MODE_MAKE_STATIC`, de modo que las piezas quedan quietas y visibles.
@@ -343,6 +287,9 @@ El primer arranque usa la misma función.
 8. **Tiempo con `tick(delta)`:** los sistemas con lógica temporal exponen un
    `tick(delta)` público, llamado desde `_physics_process`. Los tests unitarios
    lo llaman directamente, sin esperar frames reales.
+9. **Despertar al eliminar:** `PieceSpawner.despawn` pone `sleeping = false` en
+   todas las piezas restantes. Un cuerpo dormido no reacciona a que
+   desaparezca su apoyo y quedaría flotando.
 
 ---
 
