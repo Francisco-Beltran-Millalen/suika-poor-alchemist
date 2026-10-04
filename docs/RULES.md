@@ -73,11 +73,12 @@ La carpeta `docs/` se excluye de la importación con `.gdignore`.
 res://
 ├── game/                            # Composition root, estado de sesión y configuración
 │   ├── main.tscn / main.gd
-│   ├── game_state.gd
+│   ├── game_state.gd / score_store.gd
 │   ├── game_config.gd / game_config_validator.gd
 │   └── game_config.tres
 ├── board/                           # Recipiente físico y zona de peligro
 │   ├── board.tscn / board.gd
+│   ├── board_visual.gd / board_skin.gd / board_skin.tres
 │   └── danger_zone.tscn / danger_zone.gd
 ├── piece/                           # Pieza física, visual y recursos descriptores
 │   ├── piece.tscn / piece.gd / piece_visual.gd
@@ -90,9 +91,11 @@ res://
 │   └── danger_system.gd / progress_system.gd
 ├── ui/                              # Presentación, input y efectos
 │   ├── drop_controller.gd / drop_preview.gd / effects_layer.gd / piece_icon.gd
-│   ├── debug_controller.gd
+│   ├── debug_controller.gd / screen_shake.gd
+│   ├── audio_director.gd / sound_set.gd / sound_set.tres
 │   └── game_ui.tscn / game_ui.gd
 ├── tools/                           # Scripts de línea de comandos (balance_sim.gd)
+├── default_bus_layout.tres          # Buses de audio (Music, SFX)
 ├── assets/                          # Sprites, shaders, audio, fuentes
 ├── tests/                           # Tests automatizados con GUT
 │   ├── unit/

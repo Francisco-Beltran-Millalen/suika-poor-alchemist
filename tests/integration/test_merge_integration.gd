@@ -15,6 +15,7 @@ func before_each() -> void:
 	_config.rng_seed = 1234
 	_main = (load("res://game/main.tscn") as PackedScene).instantiate() as Main
 	_main.config = _config
+	_main.records_path = ""
 	add_child_autofree(_main)
 
 

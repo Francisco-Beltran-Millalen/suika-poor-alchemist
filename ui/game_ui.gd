@@ -12,6 +12,9 @@ signal button_pressed
 @export var victory_view_delay: float = 1.5
 
 var _state: GameState
+# El récord llega con `new_record` justo después de `status_changed`, y la
+# vista de victoria se muestra con retraso: se recuerda hasta el próximo reinicio.
+var _is_new_record: bool = false
 
 @onready var _score_value: Label = $Root/LeftPanel/ScoreValue
 @onready var _next_piece: PieceIcon = $Root/RightPanel/NextPiece
@@ -22,6 +25,9 @@ var _state: GameState
 @onready var _victory_score: Label = $Root/VictoryView/VBox/FinalScore
 @onready var _victory_timer: Timer = $VictoryTimer
 @onready var _debug_label: Label = $Root/DebugLabel
+@onready var _best_value: Label = $Root/LeftPanel/BestValue
+@onready var _game_over_record: Label = $Root/GameOverView/VBox/NewRecord
+@onready var _victory_record: Label = $Root/VictoryView/VBox/NewRecord
 
 
 func _ready() -> void:
@@ -30,9 +36,15 @@ func _ready() -> void:
 	_victory_timer.timeout.connect(_on_victory_timer_timeout)
 
 
-func setup(state: GameState, catalog: PieceCatalog) -> void:
+## `scores` es opcional: con `null` no se muestra el récord.
+func setup(state: GameState, catalog: PieceCatalog, scores: ScoreStore = null) -> void:
 	_state = state
 	_build_legend(catalog)
+	_best_value.visible = scores != null
+	if scores != null:
+		scores.best_changed.connect(_on_scores_best_changed)
+		scores.new_record.connect(_on_scores_new_record)
+		_on_scores_best_changed(scores.get_best())
 	state.score_changed.connect(_on_state_score_changed)
 	state.next_piece_changed.connect(_on_state_next_piece_changed)
 	state.status_changed.connect(_on_state_status_changed)
@@ -71,6 +83,8 @@ func _show_end_view(view: Control) -> void:
 	var text: String = "Puntuación final: %d" % _state.get_score()
 	_game_over_score.text = text
 	_victory_score.text = text
+	_game_over_record.visible = _is_new_record
+	_victory_record.visible = _is_new_record
 	view.show()
 
 
@@ -88,6 +102,10 @@ func _on_state_status_changed(status: GameState.Status) -> void:
 	_victory_timer.stop()
 	_game_over_view.hide()
 	_victory_view.hide()
+	if not _state.is_finished():
+		_is_new_record = false
+		_game_over_record.hide()
+		_victory_record.hide()
 	match status:
 		GameState.Status.GAME_OVER:
 			_show_end_view(_game_over_view)
@@ -96,6 +114,16 @@ func _on_state_status_changed(status: GameState.Status) -> void:
 				_victory_timer.start(victory_view_delay)
 			else:
 				_show_end_view(_victory_view)
+
+
+func _on_scores_best_changed(best: int) -> void:
+	_best_value.text = "Récord: %d" % best
+
+
+func _on_scores_new_record(_score: int) -> void:
+	_is_new_record = true
+	_game_over_record.visible = _game_over_view.visible
+	_victory_record.visible = _victory_view.visible
 
 
 func _on_victory_timer_timeout() -> void:

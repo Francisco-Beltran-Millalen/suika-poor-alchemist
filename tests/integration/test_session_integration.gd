@@ -14,6 +14,7 @@ func before_each() -> void:
 	_config.rng_seed = 1234
 	_main = (load("res://game/main.tscn") as PackedScene).instantiate() as Main
 	_main.config = _config
+	_main.records_path = ""
 	add_child_autofree(_main)
 
 
@@ -85,3 +86,17 @@ func test_debug_high_piece_replaces_current_with_one_below_max() -> void:
 	_main.get_debug_controller().high_piece_requested.emit()
 	assert_same(_main.get_state().get_current_piece(),
 			catalog.get_by_level(catalog.get_max_level() - 1))
+
+
+func test_finished_game_with_points_emits_new_record_and_shows_the_label() -> void:
+	_main.get_state().add_score(12)
+	_main.get_state().set_game_over()
+	var label: Label = _main.get_ui().get_node("Root/GameOverView/VBox/NewRecord") as Label
+	assert_true(label.visible, "¡Nuevo récord!")
+	assert_eq((_main.get_ui().get_node("Root/LeftPanel/BestValue") as Label).text, "Récord: 12")
+
+
+func test_finished_game_without_points_is_not_a_record() -> void:
+	_main.get_state().set_game_over()
+	var label: Label = _main.get_ui().get_node("Root/GameOverView/VBox/NewRecord") as Label
+	assert_false(label.visible)

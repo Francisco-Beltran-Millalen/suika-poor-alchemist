@@ -86,3 +86,50 @@ func test_non_interactive_containers_ignore_mouse() -> void:
 	for path: String in ["Root", "Root/LeftPanel", "Root/RightPanel", "Root/RightPanel/Legend",
 			"Root/RightPanel/NextPiece", "Root/GameOverView", "Root/VictoryView"]:
 		assert_eq((_node(path) as Control).mouse_filter, Control.MOUSE_FILTER_IGNORE, path)
+
+
+func _make_ui_with_scores(scores: ScoreStore) -> GameUI:
+	var ui := (load("res://ui/game_ui.tscn") as PackedScene).instantiate() as GameUI
+	add_child_autofree(ui)
+	ui.setup(_state, _catalog, scores)
+	return ui
+
+
+func test_best_label_follows_the_store() -> void:
+	var scores := ScoreStore.new("")
+	scores.submit(25)
+	var ui: GameUI = _make_ui_with_scores(scores)
+	var label: Label = ui.get_node("Root/LeftPanel/BestValue") as Label
+	assert_true(label.visible)
+	assert_eq(label.text, "Récord: 25")
+	scores.submit(60)
+	assert_eq(label.text, "Récord: 60")
+
+
+func test_best_label_is_hidden_without_a_store() -> void:
+	assert_false((_node("Root/LeftPanel/BestValue") as Label).visible)
+
+
+func test_new_record_label_shows_in_game_over_and_hides_on_restart() -> void:
+	var scores := ScoreStore.new("")
+	var ui: GameUI = _make_ui_with_scores(scores)
+	var label: Label = ui.get_node("Root/GameOverView/VBox/NewRecord") as Label
+	_state.add_score(5)
+	_state.set_game_over()
+	assert_false(label.visible, "sin récord, oculta")
+	scores.submit(5)
+	assert_true(label.visible, "con récord, visible")
+	_state.reset()
+	assert_false(label.visible, "se oculta al reiniciar")
+
+
+func test_new_record_label_survives_the_victory_delay() -> void:
+	var scores := ScoreStore.new("")
+	var ui: GameUI = _make_ui_with_scores(scores)
+	ui.victory_view_delay = 0.05
+	_state.add_score(5)
+	_state.set_victory()
+	scores.submit(5)
+	var view: Control = ui.get_node("Root/VictoryView") as Control
+	assert_true(await wait_until(func() -> bool: return view.visible, 2.0))
+	assert_true((ui.get_node("Root/VictoryView/VBox/NewRecord") as Label).visible)

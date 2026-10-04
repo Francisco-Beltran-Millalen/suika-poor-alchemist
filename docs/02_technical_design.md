@@ -85,6 +85,7 @@ Reglas:
 | `GameConfig`             | Datos        | `Resource`      | `game/game_config.gd`                |
 | `GameState`              | Simulación   | `RefCounted`    | `game/game_state.gd`                 |
 | `PieceGenerator`         | Simulación   | `RefCounted`    | `systems/piece_generator.gd`         |
+| `ScoreStore`             | Simulación   | `RefCounted`    | `game/score_store.gd`                |
 | `Piece`                  | Simulación   | `RigidBody2D`   | `piece/piece.gd` + `.tscn`           |
 | `Board`                  | Simulación   | `Node2D`        | `board/board.gd` + `.tscn`           |
 | `DangerZone`             | Simulación   | `Area2D`        | `board/danger_zone.gd` + `.tscn`     |
@@ -114,6 +115,8 @@ Responsabilidad única de cada uno:
 - **PieceGenerator**: decide el próximo tipo de pieza. Combina la
   `SpawnStrategy` con un `RandomNumberGenerator` propio, que puede tener
   semilla.
+- **ScoreStore**: récord local persistido con `ConfigFile`; lo crea `Main` con
+  la ruta inyectada (vacía → solo en memoria). Archivo ilegible = récord 0.
 - **Piece**: cuerpo físico de una instancia. Guarda su `PieceData` y su estado
   (`DROPPING`/`ACTIVE`/`CONSUMED`) y emite `contact_detected`. No fusiona, no
   puntúa y no conoce ningún sistema.
@@ -235,6 +238,7 @@ DropSystem.drop_ready_changed(ready)          ─▶ DropPreview
 
 GameState.score_changed(score)                ─▶ GameUI
 GameState.current_piece_changed(data)         ─▶ DropPreview, DropSystem (re-limitar el apuntado)
+ScoreStore.best_changed / new_record         ─▶ GameUI
 GameState.next_piece_changed(data)            ─▶ GameUI
 GameState.status_changed(status)              ─▶ GameUI, Main (congelar)
 ```

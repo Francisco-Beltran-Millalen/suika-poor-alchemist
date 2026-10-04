@@ -11,11 +11,14 @@ const DEBUG_OVERLAY_INTERVAL: float = 0.25
 @export var config: GameConfig = preload("res://game/game_config.tres")
 ## Presets que F1–F3 activan. Solo se usan en builds de depuración.
 @export var debug_strategies: Array[SpawnStrategy] = []
+## Ruta del récord. Vacía → récord solo en memoria (la usan los tests).
+@export var records_path: String = "user://records.cfg"
 ## Sonidos de la partida (todos opcionales).
 @export var sound_set: SoundSet
 
 var _state: GameState
 var _generator: PieceGenerator
+var _scores: ScoreStore
 var _debug_strategy_name: String = ""
 var _debug_timer: Timer
 
@@ -103,7 +106,8 @@ func _compose() -> void:
 	_effects.setup(_state, _merge_system, _danger_system, config, _progress_system)
 	_screen_shake.setup(_stage, _merge_system)
 	_audio_director.setup(_state, _drop_system, _merge_system, _danger_system, sound_set)
-	_ui.setup(_state, config.piece_catalog)
+	_scores = ScoreStore.new(records_path)
+	_ui.setup(_state, config.piece_catalog, _scores)
 	_drop_controller.aim_requested.connect(_drop_system.request_aim_global)
 	_drop_controller.aim_step_requested.connect(_drop_system.request_aim_step)
 	_drop_controller.drop_requested.connect(_drop_system.request_drop)
@@ -140,9 +144,11 @@ func _update_world_position() -> void:
 	_world.position = Vector2((visible_width - config.container_width) / 2.0, BOARD_TOP_MARGIN)
 
 
-# La regla de "terminada" vive en `GameState`; aquí solo se congela el tablero.
+# La regla de "terminada" vive en `GameState`; aquí se congela el tablero y se registra el récord.
 func _on_state_status_changed(_status: GameState.Status) -> void:
 	_board.set_frozen(_state.is_finished())
+	if _state.is_finished():
+		_scores.submit(_state.get_score())
 
 
 # Solo se reinicia una partida terminada (la consulta vive en `GameState`).

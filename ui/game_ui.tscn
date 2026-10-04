@@ -70,6 +70,10 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 48
 text = "0"
 
+[node name="BestValue" type="Label" parent="Root/LeftPanel"]
+layout_mode = 2
+text = "Récord: 0"
+
 [node name="RightPanel" type="VBoxContainer" parent="Root"]
 layout_mode = 1
 anchors_preset = 1
@@ -130,6 +134,13 @@ layout_mode = 2
 text = "Puntuación final: 0"
 horizontal_alignment = 1
 
+[node name="NewRecord" type="Label" parent="Root/GameOverView/VBox"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.83, 0.42, 1)
+text = "¡Nuevo récord!"
+horizontal_alignment = 1
+
 [node name="RestartButton" type="Button" parent="Root/GameOverView/VBox"]
 layout_mode = 2
 text = "Reiniciar (R)"
@@ -168,6 +179,13 @@ autowrap_mode = 2
 [node name="FinalScore" type="Label" parent="Root/VictoryView/VBox"]
 layout_mode = 2
 text = "Puntuación final: 0"
+horizontal_alignment = 1
+
+[node name="NewRecord" type="Label" parent="Root/VictoryView/VBox"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.83, 0.42, 1)
+text = "¡Nuevo récord!"
 horizontal_alignment = 1
 
 [node name="RestartButton" type="Button" parent="Root/VictoryView/VBox"]
