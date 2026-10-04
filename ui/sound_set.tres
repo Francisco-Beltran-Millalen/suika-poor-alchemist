@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SoundSet" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://ui/sound_set.gd" id="1_set"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx_drop.wav" id="2_drop"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx_merge.wav" id="3_merge"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx_merge_high.wav" id="4_high"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx_danger_loop.wav" id="5_danger"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx_game_over.wav" id="6_over"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx_victory.wav" id="7_victory"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx_ui_click.wav" id="8_click"]
+[ext_resource type="AudioStream" path="res://assets/audio/bgm_workshop.wav" id="9_music"]
+
+[resource]
+script = ExtResource("1_set")
+drop = ExtResource("2_drop")
+merge = ExtResource("3_merge")
+merge_high = ExtResource("4_high")
+danger_loop = ExtResource("5_danger")
+game_over = ExtResource("6_over")
+victory = ExtResource("7_victory")
+ui_click = ExtResource("8_click")
+music = ExtResource("9_music")

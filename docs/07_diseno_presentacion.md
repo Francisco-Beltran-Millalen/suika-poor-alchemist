@@ -99,11 +99,35 @@ Cada `PieceData.texture` apunta a `assets/sprites/pieces/<id>.png`
   trae una luz muy marcada que no debe girar. Sin textura, el placeholder
   siempre se mantiene derecho.
 - **Reducción.** La leyenda (24 px) y la vista previa reducen los sprites de
-  512 px; por eso las texturas se importan con mipmaps (§5).
+  512 px; por eso las texturas se importan con mipmaps (§6).
 
 ---
 
-## 5. Assets y placeholders
+## 5. Audio
+
+`AudioDirector` observa la simulación y reproduce los sonidos de `SoundSet`
+(`ui/sound_set.tres`, Anexo A.4). Todos son opcionales: con `null`, silencio.
+Hay dos buses bajo `Master` (`default_bus_layout.tres`): `Music` y `SFX`.
+
+| Evento (señal) | Sonido | Detalle |
+| -------------- | ------ | ------- |
+| `DropSystem.piece_dropped` | `drop` | |
+| `MergeSystem.pieces_merged` | `merge` | `pitch_scale = 1,5 − 0,1·nivel` (mín. 0,6): las piezas grandes suenan graves |
+| `pieces_merged` con fusión alta | `merge_high` | Tono 1,0; si falta, se usa `merge` |
+| `DangerSystem.danger_changed(ratio)` | `danger_loop` | Volumen proporcional al ratio (mín. −30 dB); se detiene en 0 y al terminar la partida |
+| `GameState.status_changed` → `GAME_OVER` / `VICTORY` | `game_over` / `victory` | La música baja a −20 dB en las pantallas de fin |
+| `GameUI.button_pressed` | `ui_click` | `Main` lo conecta a `AudioDirector.play_ui_click` |
+| Arranque | `music` | Bucle a −8 dB |
+
+- Hay 8 voces de efectos en rotación: las cascadas no cortan sonidos.
+- **Silencio (`M`).** `DropController.mute_requested` → `AudioDirector.toggle_mute`,
+  que alterna el mute del bus `Master`.
+- **Pausa.** `AudioDirector` es `PROCESS_MODE_ALWAYS`; `set_paused(true)` pausa
+  el bucle de peligro y baja la música.
+
+---
+
+## 6. Assets y placeholders
 
 Cada asset del Anexo A de `06_plan_iteracion_2.md` existe como **placeholder**
 con su ruta, nombre, tamaño y formato definitivos. La fuente única de rutas y
@@ -123,7 +147,7 @@ godot --headless -s tools/generate_placeholders.gd -- --force
 por defecto en las texturas: los sprites de 512 px se reducen a 24 px en la
 leyenda y sin mipmaps se verían con dientes.
 
-### 5.1. Procedimiento de integración de un asset definitivo
+### 6.1. Procedimiento de integración de un asset definitivo
 
 1. Exportar el archivo con **el mismo nombre, ruta, tamaño y formato** que su
    placeholder y sobrescribirlo.
@@ -131,7 +155,7 @@ leyenda y sin mipmaps se verían con dientes.
 3. Ejecutar la suite: `test_asset_spec.gd` falla si el tamaño o el formato no
    coinciden.
 4. Revisar en el juego (`F4` carga una pieza de nivel alto) y marcarlo como
-   "definitivo" en la tabla de §5.3.
+   "definitivo" en la tabla de §6.3.
 
 Excepciones, que requieren cambiar **una línea**:
 
@@ -146,7 +170,7 @@ Los bucles de audio no se escriben en el WAV: están en el `.import`
 (`edit/loop_mode=2`) de `sfx_danger_loop.wav` y `bgm_workshop.wav`, y se
 conservan al sustituir el archivo.
 
-### 5.2. Plantillas del artista (`docs/plantillas/`)
+### 6.2. Plantillas del artista (`docs/plantillas/`)
 
 Una imagen por tamaño, sin texto. Leyenda de colores:
 
@@ -157,7 +181,7 @@ Una imagen por tamaño, sin texto. Leyenda de colores:
 | Gris claro (material) | Interior del cuerpo; el gris oscuro exterior es el margen para adornos |
 | Rojo / azul (pergamino) | Esquinas de 32 px que no se deforman / centro que se estira |
 
-### 5.3. Estado de assets
+### 6.3. Estado de assets
 
 | Archivo | Estado |
 | ------- | ------ |

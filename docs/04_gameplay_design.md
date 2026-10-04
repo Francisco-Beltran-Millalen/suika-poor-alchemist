@@ -67,6 +67,7 @@ jugador puede seguir apuntando.
 | `aim_right`       | `D`, `→`                      | Mueve la posición a `aim_speed` px/s     |
 | `drop`            | clic izquierdo, `Espacio`     | Suelta el material actual                |
 | `restart`         | `R`                           | Reinicia (solo en Game Over o Victoria)  |
+| `toggle_mute`     | `M`                           | Silencia o restaura todo el sonido       |
 
 - El jugador solo elige la posición **horizontal**. La vertical es fija
   (`spawn_y`).

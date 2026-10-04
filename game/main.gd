@@ -11,6 +11,8 @@ const DEBUG_OVERLAY_INTERVAL: float = 0.25
 @export var config: GameConfig = preload("res://game/game_config.tres")
 ## Presets que F1–F3 activan. Solo se usan en builds de depuración.
 @export var debug_strategies: Array[SpawnStrategy] = []
+## Sonidos de la partida (todos opcionales).
+@export var sound_set: SoundSet
 
 var _state: GameState
 var _generator: PieceGenerator
@@ -28,6 +30,7 @@ var _debug_timer: Timer
 @onready var _danger_system: DangerSystem = $Systems/DangerSystem
 @onready var _progress_system: ProgressSystem = $Systems/ProgressSystem
 @onready var _screen_shake: ScreenShake = $ScreenShake
+@onready var _audio_director: AudioDirector = $AudioDirector
 @onready var _drop_controller: DropController = $DropController
 @onready var _ui: GameUI = $GameUI
 @onready var _debug_controller: DebugController = $DebugController
@@ -80,6 +83,10 @@ func get_debug_controller() -> DebugController:
 	return _debug_controller
 
 
+func get_audio_director() -> AudioDirector:
+	return _audio_director
+
+
 func _compose() -> void:
 	_state = GameState.new()
 	_debug_strategy_name = config.spawn_strategy.resource_path.get_file().get_basename()
@@ -95,6 +102,7 @@ func _compose() -> void:
 	_preview.setup(_state, _drop_system, config)
 	_effects.setup(_state, _merge_system, _danger_system, config, _progress_system)
 	_screen_shake.setup(_stage, _merge_system)
+	_audio_director.setup(_state, _drop_system, _merge_system, _danger_system, sound_set)
 	_ui.setup(_state, config.piece_catalog)
 	_drop_controller.aim_requested.connect(_drop_system.request_aim_global)
 	_drop_controller.aim_step_requested.connect(_drop_system.request_aim_step)
@@ -103,6 +111,8 @@ func _compose() -> void:
 	_state.status_changed.connect(_on_state_status_changed)
 	_ui.restart_requested.connect(_on_restart_requested)
 	_drop_controller.restart_requested.connect(_on_restart_requested)
+	_drop_controller.mute_requested.connect(_audio_director.toggle_mute)
+	_ui.button_pressed.connect(_audio_director.play_ui_click)
 	_debug_controller.strategy_requested.connect(_on_debug_strategy_requested)
 	_debug_controller.high_piece_requested.connect(_on_debug_high_piece_requested)
 	_debug_controller.overlay_toggled.connect(_on_debug_overlay_toggled)

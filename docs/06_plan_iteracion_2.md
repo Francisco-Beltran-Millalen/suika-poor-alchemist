@@ -1005,3 +1005,11 @@ con su motivo y la fase en que ocurrió.)*
      audio comparten, como pide el plan (no escribir el número 6 en el código).
    - `ProgressSystem` no emite `points_awarded` cuando el importe es 0
      (`add_score` también lo ignora): un "+0" flotante no aporta nada.
+4. **Fase 6 — clic de los botones.** Se elige la opción más simple: `GameUI`
+   emite `button_pressed` al pulsar cualquier botón y `Main` lo conecta a
+   `AudioDirector.play_ui_click()`. Ambos son API pública nueva, no prevista en
+   el contrato. `Main` añade además `@export var sound_set: SoundSet` (asignado
+   en `main.tscn`) y `get_audio_director()`.
+5. **Fase 5 — línea guía que se detiene (paso 6, opcional).** No se
+   implementa: el plan la condiciona a que "quede claro al jugar" y requiere
+   partidas humanas.

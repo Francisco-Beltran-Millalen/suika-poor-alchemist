@@ -100,6 +100,8 @@ Reglas:
 | `PieceIcon`              | Presentación | `Control`       | `ui/piece_icon.gd`                   |
 | `BoardVisual`            | Presentación | `Node2D`        | `board/board_visual.gd`              |
 | `ScreenShake`            | Presentación | `Node`          | `ui/screen_shake.gd`                 |
+| `AudioDirector`          | Presentación | `Node`          | `ui/audio_director.gd`               |
+| `SoundSet`               | Datos        | `Resource`      | `ui/sound_set.gd` + `.tres`          |
 | `BoardSkin`              | Datos        | `Resource`      | `board/board_skin.gd` + `.tres`      |
 | `DebugController`        | Presentación | `Node`          | `ui/debug_controller.gd`             |
 | `GameUI`                 | Presentación | `CanvasLayer`   | `ui/game_ui.gd` + `.tscn`            |
@@ -142,6 +144,8 @@ Responsabilidad única de cada uno:
   `FRONT` delante) con las texturas de `BoardSkin`, o el placeholder procedural.
   `Board` ya no dibuja nada.
 - **ScreenShake**: sacude el `Stage` tras fusiones altas y en la victoria.
+- **AudioDirector**: reproduce el sonido de cada evento y la música; observa
+  señales y nunca decide reglas. Procesa también en pausa.
 - **DebugController**: traduce F1–F4 y F12 en intenciones de depuración; solo
   actúa en builds de depuración.
 - **GameUI**: puntuación, PRÓXIMO, leyenda de rareza y pantallas de Game Over
@@ -176,6 +180,7 @@ main.tscn
     │   ├── DangerSystem (Node)
     │   └── ProgressSystem (Node)
     ├── ScreenShake (Node)
+    ├── AudioDirector (Node)
     ├── DropController (Node)
     ├── DebugController (Node)
     └── GameUI (game_ui.tscn, CanvasLayer)
@@ -212,6 +217,8 @@ DropController.aim_requested(global_x)        ─▶ DropSystem.request_aim_glob
 DropController.aim_step_requested(dir, delta) ─▶ DropSystem.request_aim_step
 DropController.drop_requested()               ─▶ DropSystem.request_drop
 DropController.restart_requested()            ─▶ Main._on_restart_requested
+DropController.mute_requested()               ─▶ AudioDirector.toggle_mute
+GameUI.button_pressed()                       ─▶ AudioDirector.play_ui_click
 DebugController.strategy_requested(i)         ─▶ Main (cambia estrategia y reinicia)
 DebugController.high_piece_requested()        ─▶ Main ─▶ GameState.debug_set_current
 DebugController.overlay_toggled()             ─▶ Main ─▶ GameUI.set_debug_text

@@ -5,6 +5,8 @@ extends CanvasLayer
 ## Observa el estado; nunca lo modifica. El reinicio sale como intención.
 
 signal restart_requested
+## Se emite al pulsar cualquier botón (para el sonido de clic).
+signal button_pressed
 
 ## Segundos hasta mostrar la pantalla de victoria (deja ver la animación).
 @export var victory_view_delay: float = 1.5
@@ -101,4 +103,5 @@ func _on_victory_timer_timeout() -> void:
 
 
 func _on_restart_button_pressed() -> void:
+	button_pressed.emit()
 	restart_requested.emit()

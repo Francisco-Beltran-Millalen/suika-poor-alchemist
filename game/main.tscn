@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=23 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://board/board.tscn" id="2_board"]
@@ -16,6 +16,8 @@
 [ext_resource type="Texture2D" path="res://assets/sprites/scene/alchemist_dropper.png" id="18_dropper"]
 [ext_resource type="Texture2D" path="res://assets/sprites/fx/sparkle.png" id="19_sparkle"]
 [ext_resource type="Script" path="res://ui/screen_shake.gd" id="20_shake"]
+[ext_resource type="Script" path="res://ui/audio_director.gd" id="21_audio"]
+[ext_resource type="Resource" path="res://ui/sound_set.tres" id="22_sounds"]
 [ext_resource type="Script" path="res://piece/spawn/spawn_strategy.gd" id="16_strategy"]
 [ext_resource type="Resource" path="res://piece/spawn/spawn_suika_classic.tres" id="13_classic"]
 [ext_resource type="Resource" path="res://piece/spawn/spawn_uniform_1_4.tres" id="14_uniform"]
@@ -23,6 +25,7 @@
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
+sound_set = ExtResource("22_sounds")
 debug_strategies = Array[ExtResource("16_strategy")]([ExtResource("13_classic"), ExtResource("14_uniform"), ExtResource("15_weighted")])
 
 [node name="Background" type="CanvasLayer" parent="."]
@@ -72,6 +75,10 @@ script = ExtResource("8_progress")
 
 [node name="ScreenShake" type="Node" parent="."]
 script = ExtResource("20_shake")
+
+[node name="AudioDirector" type="Node" parent="."]
+process_mode = 3
+script = ExtResource("21_audio")
 
 [node name="DropController" type="Node" parent="."]
 script = ExtResource("6_controller")

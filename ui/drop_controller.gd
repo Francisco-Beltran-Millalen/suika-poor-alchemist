@@ -6,6 +6,7 @@ signal aim_requested(global_x: float)
 signal aim_step_requested(direction: float, delta: float)
 signal drop_requested
 signal restart_requested
+signal mute_requested
 
 
 func _process(delta: float) -> void:
@@ -22,3 +23,5 @@ func _unhandled_input(event: InputEvent) -> void:
 		drop_requested.emit()
 	elif event.is_action_pressed("restart"):
 		restart_requested.emit()
+	elif event.is_action_pressed("toggle_mute"):
+		mute_requested.emit()

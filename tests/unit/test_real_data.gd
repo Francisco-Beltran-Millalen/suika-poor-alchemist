@@ -80,3 +80,15 @@ func test_board_skin_points_to_the_jar_sprites() -> void:
 	assert_not_null(skin)
 	assert_eq(skin.back_texture.resource_path, "res://assets/sprites/scene/jar_back.png")
 	assert_eq(skin.front_texture.resource_path, "res://assets/sprites/scene/jar_front.png")
+
+
+func test_sound_set_has_every_field_assigned() -> void:
+	var sounds := load("res://ui/sound_set.tres") as SoundSet
+	assert_not_null(sounds)
+	var checked: int = 0
+	for property: Dictionary in sounds.get_property_list():
+		if (property["usage"] as int) & PROPERTY_USAGE_SCRIPT_VARIABLE == 0:
+			continue
+		checked += 1
+		assert_not_null(sounds.get(property["name"] as String), "%s asignado" % property["name"])
+	assert_eq(checked, 8, "se comprueban los 8 sonidos")
