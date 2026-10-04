@@ -15,6 +15,7 @@ const _PLANK_SPACING: float = 48.0
 @export var skin: BoardSkin
 
 var _config: GameConfig
+var _wall_rects: Array[Rect2] = []
 
 
 func _draw() -> void:
@@ -26,8 +27,11 @@ func _draw() -> void:
 		_draw_front()
 
 
-func setup(config: GameConfig) -> void:
+## `wall_rects` son las paredes de colisión de `Board` (izquierda, derecha,
+## suelo): el respaldo procedural las dibuja tal cual, sin recalcularlas.
+func setup(config: GameConfig, wall_rects: Array[Rect2]) -> void:
 	_config = config
+	_wall_rects = wall_rects
 	queue_redraw()
 
 
@@ -37,7 +41,7 @@ func _draw_back() -> void:
 		draw_texture_rect(skin.back_texture, interior, false)
 	else:
 		draw_rect(interior, _BACKGROUND_COLOR)
-	var danger_color: Color = skin.danger_color if skin != null else BoardSkin.new().danger_color
+	var danger_color: Color = skin.danger_color if skin != null else BoardSkin.DEFAULT_DANGER_COLOR
 	draw_dashed_line(Vector2(0.0, _config.danger_line_y),
 			Vector2(_config.container_width, _config.danger_line_y), danger_color, 2.0, 10.0)
 
@@ -50,7 +54,7 @@ func _draw_front() -> void:
 		draw_texture_rect(skin.front_texture, Rect2(-t, 0.0, _config.container_width + 2.0 * t,
 				_config.container_height + t), false)
 		return
-	for rect: Rect2 in _wall_rects():
+	for rect: Rect2 in _wall_rects:
 		_draw_wall(rect)
 
 
@@ -72,16 +76,3 @@ func _draw_wall(rect: Rect2) -> void:
 		var inner_x: float = rect.end.x if rect.position.x < 0.0 else rect.position.x
 		draw_line(Vector2(inner_x, rect.position.y), Vector2(inner_x, rect.end.y), _WALL_EDGE_COLOR, 3.0)
 
-
-# Mismos rectángulos que las paredes de colisión de `Board`. No se llama a
-# `Board` para evitar una referencia circular entre ambas clases.
-func _wall_rects() -> Array[Rect2]:
-	var width: float = _config.container_width
-	var height: float = _config.container_height
-	var t: float = _config.wall_thickness
-	var e: float = DangerZone.EXTENSION_ABOVE
-	var rects: Array[Rect2] = []
-	rects.append(Rect2(-t, -e, t, height + e))
-	rects.append(Rect2(width, -e, t, height + e))
-	rects.append(Rect2(-t, height, width + 2.0 * t, t))
-	return rects

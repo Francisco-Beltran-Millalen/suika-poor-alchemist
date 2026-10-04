@@ -67,8 +67,8 @@ hoy niveles 6 y 7); la sacudida y el audio usan esa única definición.
 | Aparición con rebote (`PieceVisual.play_pop_in`) | Pieza creada en `ACTIVE` (fusión) | 0,15 s, escala 0,6 → 1; la colisión tiene el tamaño completo desde el primer frame |
 | Anillo de fusión | `pieces_merged` | 0,25 s |
 | Partículas de fusión (`CPUParticles2D`, `sparkle.png`) | `pieces_merged` | 0,5 s; `10 + 2·nivel` partículas, color del resultado |
-| Texto flotante `+N` | `points_awarded` | 0,8 s, sube 40 px y se desvanece |
-| Sacudida de `Stage` (`ScreenShake`) | Fusión alta: 4 px; victoria: 14 px; fusión normal: ninguna | 0,25 s, decae y vuelve a 0 |
+| Texto flotante `+N` | `points_awarded` | 0,8 s, sube 40 px y se desvanece; fuente del tema (`text_theme`) |
+| Sacudida de `Stage` (`ScreenShake`) | Fusión alta: 4 px; victoria: 14 px; fusión normal: ninguna | 0,25 s, decae y vuelve a 0 (también al pausar) |
 | Victoria (anillos, destello, partículas, piedra fantasma) | `max_level_merged` | 1,5 s |
 | Advertencia de peligro | `danger_changed` | Mientras el ratio > 0 |
 

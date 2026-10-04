@@ -21,8 +21,11 @@ const MERGE_PARTICLES_BASE: int = 10
 const MERGE_PARTICLES_PER_LEVEL: int = 2
 const MERGE_PARTICLES_LIFETIME: float = 0.5
 
-## Textura de las partículas de fusión. Con `null` se dibujan cuadrados.
+## Textura de las partículas de fusión y victoria. Con `null` se dibujan cuadrados.
 @export var sparkle_texture: Texture2D
+## Tema de la interfaz: su `default_font` se usa en los puntos flotantes.
+## Con `null` o sin fuente, la fuente por defecto de Godot.
+@export var text_theme: Theme
 
 var _config: GameConfig
 var _rings: Array[Ring] = []
@@ -109,7 +112,7 @@ func _draw_stone() -> void:
 func _draw_floating_text(text: FloatingText) -> void:
 	var t: float = text.age / FLOAT_DURATION
 	var rise: float = FLOAT_RISE * (1.0 - pow(1.0 - t, 2.0))
-	var font: Font = ThemeDB.fallback_font
+	var font: Font = _text_font()
 	var label: String = "+%d" % text.amount
 	var width: float = font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, FLOAT_FONT_SIZE).x
 	var origin: Vector2 = text.position + Vector2(-width / 2.0, -rise)
@@ -118,6 +121,12 @@ func _draw_floating_text(text: FloatingText) -> void:
 			Color(0.0, 0.0, 0.0, alpha * 0.8))
 	draw_string(font, origin, label, HORIZONTAL_ALIGNMENT_LEFT, -1, FLOAT_FONT_SIZE,
 			Color(1.0, 0.95, 0.7, alpha))
+
+
+func _text_font() -> Font:
+	if text_theme != null and text_theme.default_font != null:
+		return text_theme.default_font
+	return ThemeDB.fallback_font
 
 
 func _draw_ring(ring: Ring) -> void:
@@ -154,10 +163,7 @@ func _spawn_merge_particles(center: Vector2, result: PieceData) -> void:
 	particles.initial_velocity_max = 60.0 + result.radius * 2.0
 	particles.damping_min = 40.0
 	particles.damping_max = 80.0
-	particles.texture = sparkle_texture
-	# Con textura de 64 px, la escala es una fracción; sin ella, son cuadrados de ~1 px.
-	particles.scale_amount_min = 0.15 if sparkle_texture != null else 2.0
-	particles.scale_amount_max = 0.35 if sparkle_texture != null else 4.0
+	_apply_sparkle(particles, 1.0)
 	var ramp := Gradient.new()
 	ramp.offsets = PackedFloat32Array([0.0, 1.0])
 	var tint: Color = result.color.lightened(0.35)
@@ -179,8 +185,7 @@ func _spawn_victory_particles(center: Vector2) -> void:
 	particles.initial_velocity_min = 150.0
 	particles.initial_velocity_max = 420.0
 	particles.gravity = Vector2(0.0, 260.0)
-	particles.scale_amount_min = 3.0
-	particles.scale_amount_max = 7.0
+	_apply_sparkle(particles, 1.75)
 	var ramp := Gradient.new()
 	ramp.offsets = PackedFloat32Array([0.0, 0.6, 1.0])
 	ramp.colors = PackedColorArray([_GOLD, _RED, Color(_RED, 0.0)])
@@ -188,6 +193,14 @@ func _spawn_victory_particles(center: Vector2) -> void:
 	particles.finished.connect(particles.queue_free)
 	add_child(particles)
 	particles.emitting = true
+
+
+# Con textura de 64 px, la escala es una fracción; sin ella, son cuadrados de ~1 px.
+# `size` multiplica ambas escalas (la victoria usa chispas más grandes).
+func _apply_sparkle(particles: CPUParticles2D, size: float) -> void:
+	particles.texture = sparkle_texture
+	particles.scale_amount_min = (0.15 if sparkle_texture != null else 2.0) * size
+	particles.scale_amount_max = (0.35 if sparkle_texture != null else 4.0) * size
 
 
 func _clear_effects() -> void:

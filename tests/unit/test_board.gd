@@ -88,6 +88,19 @@ func test_visual_layers_surround_the_pieces() -> void:
 	assert_eq((front as BoardVisual).layer, BoardVisual.Layer.FRONT)
 
 
+# Una sola fuente de geometría: lo dibujado coincide con la colisión.
+func test_visual_walls_match_collision_walls() -> void:
+	var names: Array[String] = ["LeftWall", "RightWall", "Floor"]
+	for visual_name: String in ["BackVisual", "FrontVisual"]:
+		var rects: Array[Rect2] = (_board.get_node(visual_name) as BoardVisual)._wall_rects
+		assert_eq(rects.size(), names.size(), visual_name)
+		for i: int in names.size():
+			var wall: CollisionShape2D = _wall(names[i])
+			assert_eq(rects[i].get_center(), wall.position, "%s: centro de %s" % [visual_name, names[i]])
+			assert_eq(rects[i].size, (wall.shape as RectangleShape2D).size,
+					"%s: tamaño de %s" % [visual_name, names[i]])
+
+
 func test_board_keeps_walls_and_danger_zone_after_refactor() -> void:
 	assert_eq(_board.get_node("Walls").get_child_count(), 3)
 	assert_not_null(_board.danger_zone)

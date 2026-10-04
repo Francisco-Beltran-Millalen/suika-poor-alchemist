@@ -3,7 +3,7 @@ extends Node
 ## Sacude un nodo (el `Stage`) tras las fusiones altas y, más fuerte, en la victoria.
 ##
 ## Las fusiones normales no sacuden. Solo observa señales; el desplazamiento
-## decae en `DURATION` y el nodo vuelve siempre a su sitio.
+## decae en `DURATION` y el nodo vuelve siempre a su sitio (también al pausar).
 
 const DURATION: float = 0.25
 const HIGH_MERGE_INTENSITY: float = 4.0
@@ -26,6 +26,12 @@ func _process(delta: float) -> void:
 	_target.position = Vector2(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-1.0, 1.0)) * strength
 
 
+# Pausado no se procesa: sin esto, el escenario quedaría desplazado toda la pausa.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PAUSED:
+		_stop()
+
+
 func setup(target: Node2D, merge_system: MergeSystem) -> void:
 	_target = target
 	merge_system.pieces_merged.connect(_on_merge_system_pieces_merged)
@@ -35,6 +41,13 @@ func setup(target: Node2D, merge_system: MergeSystem) -> void:
 func _start(intensity: float) -> void:
 	_intensity = maxf(_intensity * _time_left / DURATION, intensity)
 	_time_left = DURATION
+
+
+func _stop() -> void:
+	_intensity = 0.0
+	_time_left = 0.0
+	if _target != null:
+		_target.position = Vector2.ZERO
 
 
 func _on_merge_system_pieces_merged(_source: PieceData, result: PieceData, _position: Vector2) -> void:

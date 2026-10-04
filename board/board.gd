@@ -32,8 +32,8 @@ func setup(config: GameConfig) -> void:
 		node.position = rects[i].get_center()
 		_walls.add_child(node)
 	danger_zone.setup(config)
-	_back_visual.setup(config)
-	_front_visual.setup(config)
+	_back_visual.setup(config, rects)
+	_front_visual.setup(config, rects)
 
 
 ## Limita la X de soltado a `[radius, W − radius]`.

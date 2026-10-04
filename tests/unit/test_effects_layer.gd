@@ -69,3 +69,23 @@ func test_setup_without_progress_system_is_valid() -> void:
 	_merge.pieces_merged.emit(_config.piece_catalog.get_by_level(2), _config.piece_catalog.get_by_level(3), Vector2.ZERO)
 	await wait_process_frames(1)
 	assert_eq(other._floating_texts.size(), 0)
+
+
+func test_victory_particles_use_the_sparkle_texture() -> void:
+	var sparkle := ImageTexture.create_from_image(Image.create(64, 64, false, Image.FORMAT_RGBA8))
+	_effects.sparkle_texture = sparkle
+	var catalog: PieceCatalog = _config.piece_catalog
+	_merge.max_level_merged.emit(catalog.get_by_level(catalog.get_max_level()), Vector2.ZERO)
+	var particles: Array[Node] = _effects.get_children().filter(
+			func(node: Node) -> bool: return node is CPUParticles2D)
+	assert_eq(particles.size(), 1)
+	assert_eq((particles[0] as CPUParticles2D).texture, sparkle)
+
+
+func test_floating_text_uses_the_theme_font_when_present() -> void:
+	assert_eq(_effects._text_font(), ThemeDB.fallback_font, "sin tema")
+	_effects.text_theme = Theme.new()
+	assert_eq(_effects._text_font(), ThemeDB.fallback_font, "tema sin fuente")
+	var font := SystemFont.new()
+	_effects.text_theme.default_font = font
+	assert_eq(_effects._text_font(), font, "fuente del tema")

@@ -8,7 +8,9 @@ func _make(layer: BoardVisual.Layer, skin: BoardSkin) -> BoardVisual:
 	visual.layer = layer
 	visual.skin = skin
 	add_child_autofree(visual)
-	visual.setup(DataFactory.make_config())
+	var rects: Array[Rect2] = [Rect2(-10.0, 0.0, 10.0, 100.0), Rect2(100.0, 0.0, 10.0, 100.0),
+			Rect2(-10.0, 100.0, 120.0, 10.0)]
+	visual.setup(DataFactory.make_config(), rects)
 	return visual
 
 

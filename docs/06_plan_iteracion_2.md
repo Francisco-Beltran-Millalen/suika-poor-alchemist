@@ -484,7 +484,7 @@ func setup(config: GameConfig) -> void
 1. `board.tscn`: nodos `BackVisual` (antes de `Pieces`) y `FrontVisual`
    (después de `Pieces`), ambos `BoardVisual` con el mismo `board_skin.tres`
    (en `board/`), que apunta a los placeholders `jar_back.png` y
-   `jar_front.png` de la fase 2. `Board.setup` llama a `setup(config)` de los dos.
+   `jar_front.png` de la fase 2. `Board.setup` llama a `setup(config)` de los dos (ver la desviación 2).
 2. Mueve el dibujo actual de `Board._draw` a `BoardVisual`:
    - `BACK`: con `back_texture`, la dibuja en el rectángulo interior; sin ella,
      el fondo de color actual. La línea de peligro se dibuja aquí, encima.
@@ -990,11 +990,13 @@ con su motivo y la fase en que ocurrió.)*
    no repitan esa lógica. El dibujo se reparte en `tools/placeholder_images.gd`
    y `tools/placeholder_audio.gd` (helpers estáticos sin `class_name`) para que
    `generate_placeholders.gd` quede corto. La API pública del contrato no cambia.
-2. **Fase 4 — `BoardVisual` no llama a `Board`.** Las paredes de madera de
-   respaldo calculan sus rectángulos dentro de `BoardVisual` (con
-   `DangerZone.EXTENSION_ABOVE`) en lugar de pedírselos a `Board`: `Board`
-   referencia `BoardVisual` y una llamada inversa crearía una referencia
-   circular entre clases (la misma razón de la desviación 1 de la iteración 1).
+2. **Fase 4 — `BoardVisual.setup(config, wall_rects)`.** `BoardVisual` no
+   puede llamar a `Board` (referencia circular entre clases, la misma razón de
+   la desviación 1 de la iteración 1), así que `Board.setup` le pasa los
+   rectángulos de sus paredes de colisión como segundo parámetro. Una sola
+   fuente de geometría: lo dibujado coincide siempre con la colisión (lo
+   comprueba `test_board.gd`). El color de peligro por defecto es la constante
+   `BoardSkin.DEFAULT_DANGER_COLOR`.
 3. **Fase 5 — API añadida.**
    - `EffectsLayer.setup(...)` recibe un quinto parámetro **opcional**
      `progress_system: ProgressSystem = null` para escuchar `points_awarded`; los
@@ -1025,4 +1027,9 @@ con su motivo y la fase en que ocurrió.)*
    los presets, y no hay commit `balance(config)`.
 8. **Fase 9 — sin implementar**, como se pidió. Tampoco hay fuente definitiva ni
    assets finales: el juego usa los placeholders de la fase 2.
-
+9. **Revisión posterior — presentación.** `EffectsLayer` añade
+   `@export var text_theme: Theme` (asignado a `ui/theme.tres` en `main.tscn`):
+   los puntos flotantes usan su `default_font` y, sin ella, la de Godot (la
+   fase 5 pedía "la fuente del tema si existe"). Las partículas de victoria
+   también usan `sparkle_texture`. `ScreenShake` devuelve el `Stage` a su sitio
+   al pausar (`NOTIFICATION_PAUSED`) en vez de dejarlo desplazado.
